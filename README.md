@@ -1,2 +1,4 @@
-# ALG_SoftEng
-Basta SoftEng namo kay ALG
+# Rinax Heroic Story
+Rinax, a hero renowned for his prowess in battle and his cold, calculating efficiency, embarked on a quest to the Dragon's Peak. His mission: to "rescue" a person held captive by a fearsome beast. He had been told the prisoner was a person of great importance, but Rinax had a different view. The person, who used a wide array of pronouns—he/she/they/them/us/you/me—was known to be a trans-bi individual, an identity Rinax's ingrained racist worldview rejected as a blight on the natural order. His true motivation wasn't salvation but domination, to impose his beliefs and cleanse what he saw as a stain on the world.
+
+The dragon, named Bentong, was not the monstrous, gold-hoarding creature of legend. Its scales shimmered like polished bronze, and its eyes held the ancient wisdom of the ages. Bentong guarded the tower not out of malice, but to protect the individual within—an individual who was a powerful sorcerer named Kris. Kris was not a helpless damsel but a willing guardian of a powerful nexus of magic, and their release would cause a catastrophic unraveling of reality. The tower was their sanctuary and their prison, a self-imposed exile to protect a world that refused to understand them.

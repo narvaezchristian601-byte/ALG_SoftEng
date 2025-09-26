@@ -77,6 +77,7 @@ session_start();
         <a href="orderform.php">Order Form</a>
         <a href="calendar.php">Schedule Calendar</a>
         <a href="reports.php">Reports</a>
+        <a href="import_products.php">Import Products</a>
     </nav>
 
 

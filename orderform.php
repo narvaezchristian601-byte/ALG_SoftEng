@@ -1,5 +1,5 @@
 <?php
-include("db.php");
+require_once("db.php");
 session_start();
 
 $message = "";
@@ -294,6 +294,7 @@ button:hover {
         <a href="orderform.php">Order Form</a>
         <a href="calendar.php">Schedule Calendar</a>
         <a href="reports.php">Reports</a>
+        <a href="import_products.php">Import Products</a>
     </nav>
 
     <main>

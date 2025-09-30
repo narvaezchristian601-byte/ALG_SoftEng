@@ -1,92 +1,77 @@
-<?php
-include("db.php");
-session_start();
+    <?php 
+    include("db.php");
+    session_start();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $orderId = intval($_POST['order_id'] ?? 0);
-    $newStatus = trim($_POST['new_status'] ?? '');
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $orderId = intval($_POST['order_id'] ?? 0);
+        $newStatus = trim($_POST['new_status'] ?? '');
 
-    $allowedStatuses = ['Pending', 'Completed', 'Ongoing', 'Dismissed'];
-    if ($orderId > 0 && in_array($newStatus, $allowedStatuses)) {
-
-        // Get old status AND the current stock_adjusted flag
-        $stmtOld = $conn->prepare("SELECT status, stock_adjusted FROM Orders WHERE Orders_id = ?");
-        $stmtOld->bind_param("i", $orderId);
-        $stmtOld->execute();
-        $stmtOld->bind_result($oldStatus, $oldStockAdjusted);
-        $stmtOld->fetch();
-        $stmtOld->close();
-
-        if ($oldStatus === $newStatus) {
-            echo "Status is already $newStatus. No changes made.";
+        // Allowed statuses
+        $allowedStatuses = ['Pending', 'Ongoing', 'Completed', 'Dismissed'];
+        if (!in_array($newStatus, $allowedStatuses)) {
+            echo "❌ Invalid status received: $newStatus";
             exit;
         }
 
-        $conn->begin_transaction();
-        $success = false;
-        $message = "Order #$orderId status updated from $oldStatus to $newStatus.";
+        // Fetch order info
+        $stmt = $conn->prepare("SELECT status, stock_adjusted FROM Orders WHERE Orders_id = ?");
+        $stmt->bind_param("i", $orderId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $order = $result->fetch_assoc();
+        $stmt->close();
 
-        try {
-            // Assume no stock change is needed initially
-            $newStockAdjusted = $oldStockAdjusted;
-
-            // Check if stock should be deducted
-            if ($newStatus === "Completed" && $oldStockAdjusted == 0) {
-                // Deduct stock and set flag
-                $message .= " Stock reduced.";
-                $newStockAdjusted = 1;
-            } 
-            // Check if stock should be restored
-            elseif (($newStatus !== "Completed" || $newStatus === "Dismissed") && $oldStockAdjusted == 1) {
-                // Restore stock and clear flag
-                $message .= " Stock restored.";
-                $newStockAdjusted = 0;
-            }
-
-            // If a stock adjustment is required, get order items and apply the change
-            if ($oldStockAdjusted !== $newStockAdjusted) {
-                $stmtItems = $conn->prepare("SELECT Product_id, quantity FROM OrderItems WHERE Orders_id = ?");
-                $stmtItems->bind_param("i", $orderId);
-                $stmtItems->execute();
-                $result = $stmtItems->get_result();
-                
-                $operator = ($newStockAdjusted == 1) ? '-' : '+';
-                
-                while ($row = $result->fetch_assoc()) {
-                    $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock {$operator} ? WHERE Product_id = ?");
-                    $stmtUpdate->bind_param("ii", $row['quantity'], $row['Product_id']);
-                    $stmtUpdate->execute();
-                    $stmtUpdate->close();
-                }
-                $stmtItems->close();
-            }
-
-            // Update order status and the stock_adjusted flag
-            $stmt = $conn->prepare("UPDATE Orders SET status = ?, stock_adjusted = ? WHERE Orders_id = ?");
-            $stmt->bind_param("sii", $newStatus, $newStockAdjusted, $orderId);
-            $stmt->execute();
-            $stmt->close();
-            
-            $conn->commit();
-            $success = true;
-
-        } catch (Exception $e) {
-            $conn->rollback();
-            $message = "Error: " . $e->getMessage();
+        if (!$order) {
+            echo "❌ Order not found for ID: $orderId";
+            exit;
         }
 
-        if ($success) {
-            echo $message;
+        $oldStatus = $order['status'];
+        $stockAdjusted = $order['stock_adjusted'];
+
+        echo "🔎 Current Order: ID=$orderId, OldStatus=$oldStatus, NewStatus=$newStatus, StockAdjusted=$stockAdjusted<br>";
+
+        // Fetch order items
+        $stmtItems = $conn->prepare("SELECT Product_id, quantity FROM OrderItems WHERE Orders_id = ?");
+        $stmtItems->bind_param("i", $orderId);
+        $stmtItems->execute();
+        $itemsResult = $stmtItems->get_result();
+
+        /**
+         * STOCK HANDLING LOGIC
+         */
+        if ($oldStatus === 'Dismissed' && $newStatus !== 'Dismissed' && $stockAdjusted == 1) {
+            echo "➡️ Deducting stock because order was Dismissed → $newStatus<br>";
+            while ($item = $itemsResult->fetch_assoc()) {
+                echo "   - Deducting {$item['quantity']} from Product {$item['Product_id']}<br>";
+                $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock - ? WHERE Product_id = ?");
+                $stmtUpdate->bind_param("ii", $item['quantity'], $item['Product_id']);
+                $stmtUpdate->execute();
+                $stmtUpdate->close();
+            }
+            $stockAdjusted = 0;
+        } elseif ($newStatus === 'Dismissed' && $stockAdjusted == 0) {
+            echo "➡️ Restoring stock because order changed to Dismissed<br>";
+            while ($item = $itemsResult->fetch_assoc()) {
+                echo "   - Restoring {$item['quantity']} back to Product {$item['Product_id']}<br>";
+                $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock + ? WHERE Product_id = ?");
+                $stmtUpdate->bind_param("ii", $item['quantity'], $item['Product_id']);
+                $stmtUpdate->execute();
+                $stmtUpdate->close();
+            }
+            $stockAdjusted = 1;
         } else {
-            http_response_code(500);
-            echo "Failed to update status. " . $message;
+            echo "ℹ️ No stock changes needed for this transition.<br>";
         }
-    } else {
-        http_response_code(400);
-        echo "Invalid order or status.";
+
+        $stmtItems->close();
+
+        // Update order status & stock flag
+        $stmtUpdate = $conn->prepare("UPDATE Orders SET status = ?, stock_adjusted = ? WHERE Orders_id = ?");
+        $stmtUpdate->bind_param("sii", $newStatus, $stockAdjusted, $orderId);
+        $stmtUpdate->execute();
+        $stmtUpdate->close();
+
+        echo "✅ Order #$orderId updated: $oldStatus → $newStatus (StockAdjusted=$stockAdjusted)";
     }
-} else {
-    http_response_code(405);
-    echo "Invalid request method.";
-}
-?>
+    ?>

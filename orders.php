@@ -1,5 +1,5 @@
 <?php
-include("db.php");
+require_once("db.php");
 session_start();
 
 
@@ -83,7 +83,7 @@ if ($requestedDir === 'ASC') {
     $orderDir = 'DESC';
     $currentDir = 'DESC';
 }
-
+// Get orders with customer names and items
 $stmt = $conn->prepare(
     "SELECT o.Orders_id, c.Name, o.total_amount, o.status, o.order_date,
             oi.Product_id, oi.quantity, oi.price, p.Name AS ProductName
@@ -104,12 +104,14 @@ $result = $stmt->get_result();
 // Group by Orders_id
 $orders = [];
 while ($row = $result->fetch_assoc()) {
+    // Initialize order if not exists
     $orders[$row['Orders_id']]['details'] = [
-        'Name' => $row['Name'],
-        'total_amount' => $row['total_amount'],
-        'status' => $row['status'],
-        'order_date' => $row['order_date'],
+        'Name'        => $row['Name'],
+        'total_amount'=> $row['total_amount'],
+        'status'      => $row['status'],
+        'order_date'  => $row['order_date'],
     ];
+    // Append item
     $orders[$row['Orders_id']]['items'][] = [
         'ProductName' => $row['ProductName'],
         'quantity' => $row['quantity'],
@@ -144,6 +146,7 @@ function sortLink($col, $label, $currentCol, $currentDir, $searchTerm) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ALG Roofing System - Orders</title>
 <style>
+
 
 html, body {
     margin: 0;
@@ -293,6 +296,7 @@ a {
         <a href="orderform.php">Order Form</a>
         <a href="calendar.php">Schedule Calendar</a>
         <a href="reports.php">Reports</a>
+        <a href="import_products.php">Import Products</a>
     </nav>
 
 <main>
@@ -337,6 +341,7 @@ a {
                         <option value="Completed" <?php if ($data['details']['status'] == 'Completed') echo 'selected'; ?>>Completed</option>
                         <option value="Dismissed" <?php if ($data['details']['status'] == 'Dismissed') echo 'selected'; ?>>Dismissed</option>
                     </select>
+
                 </td>
                 <td><?php echo htmlspecialchars($data['details']['order_date']); ?></td>
                 <td><button class="delete-order" data-id="<?php echo $order_id; ?>">Delete</button></td>

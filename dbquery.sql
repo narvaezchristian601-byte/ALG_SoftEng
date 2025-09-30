@@ -40,7 +40,7 @@ CREATE TABLE `Services` (
     `Services_id` INT PRIMARY KEY,
     `Name` VARCHAR(50) NOT NULL,
     `Description` TEXT,
-    `Price` DECIMAL(10, 2) NOT NULL,
+    `Price` DECIMAL(10, 2) NOT NULL
 );
 
 CREATE TABLE `Product` (
@@ -163,7 +163,7 @@ INSERT INTO `Category` (`Category_id`, `Name`, `Description`) VALUES
 
 -- Section 2: Insert data into the 'Supplier' table
 -- Suppliers of roofing materials
-INSERT INTO `Supplier` (`Supplier_id`, `Company Name`, `Contact_Person`, `Email`, `Address`, `Contact_Num`) VALUES
+INSERT INTO `Supplier` (`Supplier_id`, `Company_Name`, `Contact_Person`, `Email`, `Address`, `Contact_Num`) VALUES
 (1, 'Prime Roofing Solutions', 'Jane Doe', 'jane.doe@primerfs.com', '123 Roofing Way, Metropolis', '555-123-4567'),
 (2, 'Apex Building Materials', 'John Smith', 'john.smith@apexmaterials.com', '456 Metal Rd, Central City', '555-987-6543'),
 (3, 'Global Coatings Inc.', 'David Lee', 'david.lee@globalcoatings.com', '789 Sealant Dr, Star City', '555-555-1234'),
@@ -172,11 +172,12 @@ INSERT INTO `Supplier` (`Supplier_id`, `Company Name`, `Contact_Person`, `Email`
 
 -- Section 3: Insert data into the 'Services' table
 -- Various roofing services offered
-INSERT INTO `Services` (`Services_id`, `Name`, `Description`, `Price`, `Stock`) VALUES
-(1, 'Roof Inspection', 'Comprehensive roof inspection service to assess damage and wear.', 150.00, 1),
-(2, 'Shingle Installation', 'Professional installation of new asphalt or composite shingles.', 3500.00, 1),
-(3, 'Metal Roof Repair', 'Repair service for damaged metal roofing panels and fasteners.', 750.00, 1),
-(4, 'Gutter Cleaning', 'Routine gutter cleaning to prevent water damage and clogs.', 120.00, 1);
+INSERT INTO `Services` (`Services_id`, `Name`, `Description`, `Price`) VALUES
+(1, 'Roof Inspection', 'Comprehensive roof inspection service to assess damage and wear.', 150.00),
+(2, 'Shingle Installation', 'Professional installation of new asphalt or composite shingles.', 3500.00),
+(3, 'Metal Roof Repair', 'Repair service for damaged metal roofing panels and fasteners.', 750.00),
+(4, 'Gutter Cleaning', 'Routine gutter cleaning to prevent water damage and clogs.', 120.00),
+(5, 'Roof Replacement', 'Complete roof replacement service with material options.', 8000.00);
 
 -- Section 4: Insert 25 products into the 'Product' table
 -- Each product is linked to a category and a supplier

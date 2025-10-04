@@ -20,14 +20,18 @@ $sql = "
 $result = $conn->query($sql);
 
 while ($row = $result->fetch_assoc()) {
+    $statusClass = strtolower($row['status'] ?? 'pending');
+    
     $events[] = [
         "id" => (int)$row['Orders_id'],
-        "title" => $row['ServiceName'] ?? 'Service',
+        "title" => ($row['CustomerName'] ?? 'N/A') . ' - ' . ($row['ServiceName'] ?? 'Service') . ' (' . ($row['status'] ?? 'N/A') . ')',
         "start" => $row['schedule_date'],
         "extendedProps" => [
             "name" => $row['CustomerName'] ?? 'N/A',
+            "service" => $row['ServiceName'] ?? 'Service',
             "status" => $row['status'] ?? 'N/A'
-        ]
+        ],
+        "className" => 'status-' . $statusClass
     ];
 }
 ?>

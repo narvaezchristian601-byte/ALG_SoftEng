@@ -6,6 +6,8 @@ $reportType = $_GET['report'] ?? 'imports';
 $month = $_GET['month'] ?? date('m');
 $year = $_GET['year'] ?? date('Y');
 
+// --- DATABASE QUERIES ---
+
 // Get totals for the cards (static overview)
 $sql = "SELECT
     (SELECT COUNT(*) FROM Supplier) AS total_suppliers,
@@ -18,13 +20,21 @@ $totals = $result->fetch_assoc();
 // Reports
 $data = [];
 $totalSales = 0;
+$totalImports = 0;
 
 if ($reportType === 'imports') {
-    $query = "SELECT pi.Import_id, p.Name AS ProductName, pi.Quantity, pi.ImportDate
+    $query = "SELECT pi.Import_id, p.Name AS ProductName, pi.Quantity, pi.ImportDate, (pi.Quantity * p.Price) AS Total
               FROM ProductImports pi
               JOIN Product p ON pi.Product_id = p.Product_id
               WHERE MONTH(pi.ImportDate) = $month AND YEAR(pi.ImportDate) = $year";
     $data = $conn->query($query);
+
+    // Calculate total imports value
+    $sumQuery = "SELECT SUM(pi.Quantity * p.Price) AS total_imports
+                 FROM ProductImports pi
+                 JOIN Product p ON pi.Product_id = p.Product_id
+                 WHERE MONTH(pi.ImportDate) = $month AND YEAR(pi.ImportDate) = $year";
+    $totalImports = $conn->query($sumQuery)->fetch_assoc()['total_imports'] ?? 0;
 }
 elseif ($reportType === 'sales') {
     $query = "SELECT o.Orders_id, c.Name AS CustomerName, o.order_date, o.total_amount
@@ -41,31 +51,52 @@ elseif ($reportType === 'sales') {
                    AND MONTH(order_date) = $month AND YEAR(order_date) = $year";
     $totalSales = $conn->query($sumQuery)->fetch_assoc()['total_sales'] ?? 0;
 }
+// --- START OF NEW INVENTORY SUMMARY REPORT LOGIC ---
+elseif ($reportType === 'inventory_summary') {
+
+    // 1. Calculate Total In (Imports during the selected month/year)
+    $totalInQuery = "SELECT SUM(Quantity) AS TotalIn
+                     FROM ProductImports
+                     WHERE MONTH(ImportDate) = $month AND YEAR(ImportDate) = $year";
+    $totalIn = $conn->query($totalInQuery)->fetch_assoc()['TotalIn'] ?? 0;
+
+    // 2. Calculate Total Out (Sales from COMPLETED orders during the selected month/year)
+    $totalOutQuery = "SELECT SUM(oi.quantity) AS TotalOut
+                      FROM OrderItems oi
+                      JOIN Orders o ON oi.Orders_id = o.Orders_id
+                      WHERE o.status = 'Completed'
+                        AND MONTH(o.order_date) = $month AND YEAR(o.order_date) = $year";
+    $totalOut = $conn->query($totalOutQuery)->fetch_assoc()['TotalOut'] ?? 0;
+
+    // 3. Calculate Ending Inventory (Current physical stock of ALL products)
+    $endingInvQuery = "SELECT SUM(Stock) AS EndingInventory FROM Product";
+    $endingInventory = $conn->query($endingInvQuery)->fetch_assoc()['EndingInventory'] ?? 0;
+
+    // 4. Calculate Beginning Inventory by deduction:
+    // Beginning = Ending + Total Out - Total In
+    $beginningInventory = $endingInventory + $totalOut - $totalIn;
+
+    // Store the results to be displayed
+    $data = [
+        'BeginningInventory' => $beginningInventory,
+        'TotalIn' => $totalIn,
+        'TotalOut' => $totalOut,
+        'EndingInventory' => $endingInventory
+    ];
+}
+// --- END OF NEW INVENTORY SUMMARY REPORT LOGIC ---
 /*elseif ($reportType === 'staff') {
     // Placeholder until StaffLog table is ready
-    $query = "SELECT s.Name, s.Email, s.Password, s.Role, 
-                     COUNT(l.LoginTime) AS total_logins, 
-                     COUNT(l.LogoutTime) AS total_logouts
+    $query = "SELECT s.Name, s.Email, s.Password, s.Role,
+                      COUNT(l.LoginTime) AS total_logins,
+                      COUNT(l.LogoutTime) AS total_logouts
               FROM Staff s
               LEFT JOIN StaffLog l ON s.Staff_id = l.Staff_id
               GROUP BY s.Staff_id";
     $data = $conn->query($query);
 }*/
 
-if ($reportType === 'imports') {
-    $query = "SELECT pi.Import_id, p.Name AS ProductName, pi.Quantity, pi.ImportDate, (pi.Quantity * p.Price) AS Total
-              FROM ProductImports pi
-              JOIN Product p ON pi.Product_id = p.Product_id
-              WHERE MONTH(pi.ImportDate) = $month AND YEAR(pi.ImportDate) = $year";
-    $data = $conn->query($query);
-
-    // Calculate total imports value
-    $sumQuery = "SELECT SUM(pi.Quantity * p.Price) AS total_imports
-                 FROM ProductImports pi
-                 JOIN Product p ON pi.Product_id = p.Product_id
-                 WHERE MONTH(pi.ImportDate) = $month AND YEAR(pi.ImportDate) = $year";
-    $totalImports = $conn->query($sumQuery)->fetch_assoc()['total_imports'] ?? 0;
-}
+// Note: Your original code had duplicate 'imports' logic, I've consolidated it above.
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +127,12 @@ if ($reportType === 'imports') {
     .report-buttons a { background:#007bff; color:white; padding:8px 12px;
                         border-radius:5px; text-decoration:none; }
     .report-buttons a.active { background:#0056b3; }
+    /* Style for the Inventory Summary Table */
+    .summary-table { width: 50%; margin: 20px auto; border: 2px solid #007bff; }
+    .summary-table th, .summary-table td { font-size: 1.1em; }
+    .summary-table th { background: #007bff; color: white; }
+    .summary-table tr:nth-child(even) { background-color: #f2f2f2; }
+    .summary-table .total-row td { font-weight: bold; background-color: #cce0ff; }
 </style>
 </head>
 <body>
@@ -112,17 +149,16 @@ if ($reportType === 'imports') {
         <a href="orderform.php">Order Form</a>
         <a href="calendar.php">Schedule Calendar</a>
         <a href="reports.php">Reports</a>
+        <a href="import_products.php">Import Products</a>
     </nav>
 
 <main>
-    <!-- Totals Overview -->
     <div class="container">
         <div class="card"><h2>Total Suppliers</h2><p><?php echo $totals['total_suppliers']; ?></p></div>
         <div class="card"><h2>Total Products</h2><p><?php echo $totals['total_products']; ?></p></div>
         <div class="card"><h2>Total Customers</h2><p><?php echo $totals['total_customers']; ?></p></div>
     </div>
 
-    <!-- Report Switch -->
     <div class="filters">
         <form method="GET">
             <input type="hidden" name="report" value="<?php echo $reportType; ?>">
@@ -149,17 +185,17 @@ if ($reportType === 'imports') {
         <div class="report-buttons">
             <a href="?report=imports&month=<?php echo $month; ?>&year=<?php echo $year; ?>" class="<?php echo $reportType=='imports'?'active':''; ?>">Import Reports</a>
             <a href="?report=sales&month=<?php echo $month; ?>&year=<?php echo $year; ?>" class="<?php echo $reportType=='sales'?'active':''; ?>">Sales Reports</a>
+            <a href="?report=inventory_summary&month=<?php echo $month; ?>&year=<?php echo $year; ?>" class="<?php echo $reportType=='inventory_summary'?'active':''; ?>">Inventory Summary</a>
             <a href="?report=staff&month=<?php echo $month; ?>&year=<?php echo $year; ?>" class="<?php echo $reportType=='staff'?'active':''; ?>">Staff Logins</a>
         </div>
     </div>
 
-    <!-- Reports Table -->
     <div class="report-table">
         <?php if ($reportType === 'imports'): ?>
             <h3>Product Import Reports (<?php echo date("F Y", mktime(0,0,0,$month,1,$year)); ?>)</h3>
             <table>
                 <tr><th>Import ID</th><th>Product</th><th>Quantity</th><th>Date</th><th>Total</th></tr>
-                <?php while($row = $data->fetch_assoc()): ?>
+                <?php if ($data): while($row = $data->fetch_assoc()): ?>
                 <tr>
                     <td><?php echo $row['Import_id']; ?></td>
                     <td><?php echo $row['ProductName']; ?></td>
@@ -167,24 +203,49 @@ if ($reportType === 'imports') {
                     <td><?php echo $row['ImportDate']; ?></td>
                     <td>₱ <?php echo number_format($row['Total'], 2); ?></td>
                 </tr>
-                <?php endwhile; ?>
+                <?php endwhile; endif; ?>
             </table>
-            <p><strong>Total Imports:</strong> ₱<?php echo number_format($totalImports, 2); ?></p>
+            <p><strong>Total Imports Value:</strong> ₱<?php echo number_format($totalImports, 2); ?></p>
 
         <?php elseif ($reportType === 'sales'): ?>
             <h3>Sales Reports (<?php echo date("F Y", mktime(0,0,0,$month,1,$year)); ?>)</h3>
             <table>
                 <tr><th>Order ID</th><th>Customer</th><th>Order Date</th><th>Total Amount</th></tr>
-                <?php while($row = $data->fetch_assoc()): ?>
+                <?php if ($data): while($row = $data->fetch_assoc()): ?>
                 <tr>
                     <td><?php echo $row['Orders_id']; ?></td>
                     <td><?php echo $row['CustomerName']; ?></td>
                     <td><?php echo $row['order_date']; ?></td>
                     <td>₱ <?php echo number_format($row['total_amount'], 2); ?></td>
                 </tr>
-                <?php endwhile; ?>
+                <?php endwhile; endif; ?>
             </table>
-            <p><strong>Total Sales:</strong> ₱<?php echo number_format($totalSales, 2); ?></p>
+            <p><strong>Total Sales Amount:</strong> ₱<?php echo number_format($totalSales, 2); ?></p>
+
+        <?php elseif ($reportType === 'inventory_summary'): ?>
+            <h3>Inventory Summary Report (<?php echo date("F Y", mktime(0,0,0,$month,1,$year)); ?>)</h3>
+            <table class="summary-table">
+                <tr>
+                    <th>Metric</th>
+                    <th>Quantity (Units)</th>
+                </tr>
+                <tr>
+                    <td>**Beginning Inventory** (Start of Month)</td>
+                    <td>**<?php echo number_format($data['BeginningInventory'], 0); ?>**</td>
+                </tr>
+                <tr>
+                    <td>(+) Total In (Imports)</td>
+                    <td><?php echo number_format($data['TotalIn'], 0); ?></td>
+                </tr>
+                <tr>
+                    <td>(-) Total Out (Completed Orders)</td>
+                    <td><?php echo number_format($data['TotalOut'], 0); ?></td>
+                </tr>
+                <tr class="total-row">
+                    <td>**Ending Inventory** (Current Stock)</td>
+                    <td>**<?php echo number_format($data['EndingInventory'], 0); ?>**</td>
+                </tr>
+            </table>
 
         <?php elseif ($reportType === 'staff'): ?>
             <h3>Staff Login Reports</h3>

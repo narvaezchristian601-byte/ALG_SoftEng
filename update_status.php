@@ -36,32 +36,48 @@
         $stmtItems->bind_param("i", $orderId);
         $stmtItems->execute();
         $itemsResult = $stmtItems->get_result();
-
-        /**
-         * STOCK HANDLING LOGIC
-         */
-        if ($oldStatus === 'Dismissed' && $newStatus !== 'Dismissed' && $stockAdjusted == 1) {
-            echo "➡️ Deducting stock because order was Dismissed → $newStatus<br>";
+        
+        // Stock handling
+        if ($newStatus === 'Completed' && $stockAdjusted == 0) {
+            echo "Deducting stock for final sale completion.<br>";
+            $itemsResult->data_seek(0);
+            // Deduct stock Pending -> Completed
             while ($item = $itemsResult->fetch_assoc()) {
-                echo "   - Deducting {$item['quantity']} from Product {$item['Product_id']}<br>";
+                echo "    - Deducting {$item['quantity']} from Product {$item['Product_id']}<br>";
                 $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock - ? WHERE Product_id = ?");
                 $stmtUpdate->bind_param("ii", $item['quantity'], $item['Product_id']);
                 $stmtUpdate->execute();
                 $stmtUpdate->close();
             }
-            $stockAdjusted = 0;
-        } elseif ($newStatus === 'Dismissed' && $stockAdjusted == 0) {
-            echo "➡️ Restoring stock because order changed to Dismissed<br>";
+            $stockAdjusted = 1; // Mark as adjusted/deducted
+
+        // 2. Restock stock if order is Dismissed
+        } elseif ($newStatus === 'Dismissed' && $stockAdjusted == 1) {
+            echo "Restoring stock because order changed to Dismissed<br>";
+            $itemsResult->data_seek(0); // Reset result pointer
             while ($item = $itemsResult->fetch_assoc()) {
-                echo "   - Restoring {$item['quantity']} back to Product {$item['Product_id']}<br>";
+                echo "    - Restoring {$item['quantity']} back to Product {$item['Product_id']}<br>";
                 $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock + ? WHERE Product_id = ?");
                 $stmtUpdate->bind_param("ii", $item['quantity'], $item['Product_id']);
                 $stmtUpdate->execute();
                 $stmtUpdate->close();
             }
-            $stockAdjusted = 1;
+            $stockAdjusted = 0; // Mark as unadjusted/restored
+
+        // 3. Add stock Dismissed -> Other
+        } elseif ($oldStatus === 'Dismissed' && $newStatus !== 'Dismissed' && $stockAdjusted == 0) {
+            echo "➡️ Re-Deducting stock because order moved out of Dismissed<br>";
+            $itemsResult->data_seek(0); 
+            while ($item = $itemsResult->fetch_assoc()) {
+                echo "    - Deducting {$item['quantity']} from Product {$item['Product_id']}<br>";
+                $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock - ? WHERE Product_id = ?");
+                $stmtUpdate->bind_param("ii", $item['quantity'], $item['Product_id']);
+                $stmtUpdate->execute();
+                $stmtUpdate->close();
+            }
+            $stockAdjusted = 1; // Mark as adjusted/deducted
         } else {
-            echo "ℹ️ No stock changes needed for this transition.<br>";
+            echo "No stock changes needed for this transition.<br>";
         }
 
         $stmtItems->close();

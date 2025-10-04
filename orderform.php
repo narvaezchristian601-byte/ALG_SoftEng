@@ -94,7 +94,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt_update_stock->close();
                         } else {
                             // Not enough stock available
-                            throw new Exception("Not enough stock for product ID $productId. Available: $stock, Requested: $quantity.");
+                            echo "<script>alert('Not enough stock for product ID $productId. Available: $stock, Requested: $quantity.'); window.history.back();</script>";
+                            return;
                         }
                     }
                 }

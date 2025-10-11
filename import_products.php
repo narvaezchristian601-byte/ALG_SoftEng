@@ -1,18 +1,13 @@
 <?php
-// import_products.php - Handles Inbound Delivery (Stock Increase)
-
 include("db.php");
 session_start();
 
-// --- DEBUGGING BLOCK (Keep this active until the script works) ---
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
-// -----------------------------------------------------------------
 
 $message = "";
 
-// 1. Re-fetch products and suppliers for initial setup and dynamic form generation
 $products_res = $conn->query("SELECT Product_id, Name, Stock FROM Product ORDER BY Name ASC");
 $allProducts = [];
 if ($products_res) {
@@ -23,16 +18,11 @@ if ($products_res) {
             'stock' => (int)$row['Stock']
         ];
     }
-    // We don't need to rewind, as we'll use the JS array for form generation.
 }
 
-// 2. Fetch all suppliers
 $suppliers_res = $conn->query("SELECT Supplier_id, Company_Name FROM Supplier ORDER BY Company_Name ASC");
-// We clone the result set to be able to use it multiple times, but since we are just using the PHP result in one loop, we just need to ensure the query succeeded.
 
-// 3. Handle form submission (Must be done before re-fetching suppliers for the dropdown)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Start a transaction for safety: all updates must succeed or fail together.
     $conn->begin_transaction();
     $overallSuccess = true;
     $message = "";
@@ -41,11 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $importDate = date('Y-m-d H:i:s');
 
     try {
-        // A. Determine Supplier to use
         $addNewSupplier = ($_POST['supplier_toggle'] ?? 'existing') === 'new';
 
         if ($addNewSupplier) {
-            // New Supplier Creation
             $companyName = trim($_POST['new_company_name'] ?? '');
             $contactPerson = trim($_POST['new_contact_person'] ?? '');
             $email = trim($_POST['new_email'] ?? '');
@@ -62,15 +50,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_new_supplier->execute();
             $newSupplierId = $conn->insert_id;
             $supplierName = htmlspecialchars($companyName);
-            $message .= "✅ New supplier '$supplierName' registered. ";
+            $message .= "New supplier '$supplierName' registered. ";
             $stmt_new_supplier->close();
 
         } else {
-            // Use Existing Supplier
             $existingSupplierId = intval($_POST['supplier_id'] ?? 0);
             if ($existingSupplierId > 0) {
                 $newSupplierId = $existingSupplierId;
-                // Fetch existing supplier name for message feedback
+
                 $stmt_fetch_name = $conn->prepare("SELECT Company_Name FROM Supplier WHERE Supplier_id = ?");
                 $stmt_fetch_name->bind_param("i", $newSupplierId);
                 $stmt_fetch_name->execute();
@@ -79,10 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $supplierName = htmlspecialchars($supplierData['Company_Name'] ?? 'Unknown Supplier');
                 $stmt_fetch_name->close();
             }
-            // If $newSupplierId is 0 or less, it remains NULL for the DB transaction (handled below)
         }
         
-        // B. Handle Multiple Product Imports
         $productIds = $_POST['product_id'] ?? [];
         $quantities = $_POST['quantity'] ?? [];
         $importCount = 0;
@@ -91,7 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("No products were added to the import list.");
         }
 
-        // Prepare statements outside the loop
         $stmt_import = $conn->prepare(
             "INSERT INTO ProductImports (Product_id, Quantity, Supplier_id, ImportDate) VALUES (?, ?, ?, ?)"
         );
@@ -106,8 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $quantity = intval($quantities[$index] ?? 0);
 
             if ($productId > 0 && $quantity > 0) {
-                // 1. Log the Import
-                 // If no supplier was chosen, try to find the most recent supplier for this product
+
                 if ($newSupplierId === NULL) {
                     $stmt_last_supplier = $conn->prepare("
                         SELECT Supplier_id 
@@ -124,9 +107,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt_last_supplier->close();
 
                     if ($row_last && $row_last['Supplier_id'] > 0) {
-                        $supplierBindId = $row_last['Supplier_id']; // fallback to existing supplier
+                        $supplierBindId = $row_last['Supplier_id']; 
                     } else {
-                        $supplierBindId = NULL; // still allow null if no past supplier exists
+                        $supplierBindId = NULL; 
                     }
                 } else {
                     $supplierBindId = $newSupplierId;
@@ -134,7 +117,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_import->bind_param("iiis", $productId, $quantity, $supplierBindId, $importDate);
                 $stmt_import->execute();
 
-                // 2. Update the Stock
                 $stmt_stock->bind_param("ii", $quantity, $productId);
                 $stmt_stock->execute();
 
@@ -150,19 +132,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("No valid product lines (Product ID > 0 and Quantity > 0) were processed.");
         }
 
-        // Commit the transaction
         $conn->commit();
-        $message .= "✅ Successfully recorded inbound delivery of $totalUnits units across $importCount product lines from **$supplierName**.";
+        $message .= "Successfully recorded inbound delivery of $totalUnits units across $importCount product lines from **$supplierName**.";
 
     } catch (Exception $e) {
-        // Rollback the transaction on failure
         $conn->rollback();
         $message = "Error recording delivery. All changes were reverted. Error: " . htmlspecialchars($e->getMessage());
         $overallSuccess = false;
     }
 }
 
-// 4. Re-fetch products after submission
 $products_res = $conn->query("SELECT Product_id, Name, Stock FROM Product ORDER BY Name ASC");
 $allProducts = [];
 if ($products_res) {
@@ -175,7 +154,6 @@ if ($products_res) {
     }
 }
 
-// 4.1. Fetch all suppliers and store in an array for JS filtering
 $suppliers_res = $conn->query("SELECT Supplier_id, Company_Name FROM Supplier ORDER BY Company_Name ASC");
 $allSuppliers = [];
 if ($suppliers_res) {
@@ -187,8 +165,6 @@ if ($suppliers_res) {
     }
 }
 
-// 4.2. Fetch Product-Supplier Relationships from past imports (NEW BLOCK)
-// Map: { Product_id: [Supplier_id, Supplier_id, ...], ... }
 $productSupplierMap = [];
 $rel_query = "
     SELECT DISTINCT 
@@ -203,7 +179,6 @@ if ($rel_res) {
         $product_id = (int)$row['Product_id'];
         $supplier_id = (int)$row['Supplier_id'];
         
-        // Use string keys for JS compatibility
         if (!isset($productSupplierMap[(string)$product_id])) {
             $productSupplierMap[(string)$product_id] = [];
         }
@@ -392,7 +367,7 @@ if ($rel_res) {
                         </tbody>
                 </table>
 
-                <button type="button" id="addRowBtn">➕ Add Product Line</button>
+                <button type="button" id="addRowBtn">Add Product Line</button>
                 
                 <button type="submit">✅ Record Full Delivery</button>
             </form>
@@ -404,18 +379,12 @@ if ($rel_res) {
     </footer>
 
     <script>
-        // Data for dynamic dropdown generation
+
         const ALL_PRODUCTS = <?php echo json_encode($allProducts); ?>;
         const ALL_SUPPLIERS = <?php echo json_encode($allSuppliers); ?>;
-        // Map: { "Product_id": [Supplier_id, Supplier_id, ...], ... }
         const PRODUCT_SUPPLIER_MAP = <?php echo json_encode($productSupplierMap); ?>;
         let rowCounter = 0;
 
-        /**
-         * Generates the HTML for a single product selection dropdown.
-         * @param {number} selectedId - The Product_id to select by default.
-         * @returns {string} HTML string for the select element.
-         */
         function generateProductSelect(selectedId = 0) {
             let options = '<option value="">-- Select Product --</option>';
             ALL_PRODUCTS.forEach(product => {
@@ -431,17 +400,9 @@ if ($rel_res) {
             `;
         }
 
-        /**
-         * Updates the stock display or other details in a row when a product is selected.
-         * (Currently not fully implemented as stock is already in the option text, but this is a placeholder for future updates).
-         */
         function updateRowDetails(selectElement) {
-            // Optional: Re-display product stock if needed, but for now it's in the option text.
         }
 
-        /**
-         * Adds a new product row to the table.
-         */
         function addProductRow() {
             const tableBody = document.getElementById('productTableBody');
             const newRow = tableBody.insertRow();
@@ -460,10 +421,6 @@ if ($rel_res) {
             cell3.innerHTML = `<button type="button" class="delete-btn" onclick="removeProductRow('${newRow.id}')">Remove</button>`;
         }
 
-        /**
-         * Removes a product row from the table.
-         * @param {string} rowId - The ID of the row to remove.
-         */
         function removeProductRow(rowId) {
             const row = document.getElementById(rowId);
             if (row) {
@@ -475,9 +432,6 @@ if ($rel_res) {
             }
         }
         
-        /**
-         * Populates the filter_product_id dropdown with products from ALL_PRODUCTS.
-         */
         function populateProductFilter() {
             const select = document.getElementById('filter_product_id');
             // Skip the first option (Show All Products)
@@ -490,10 +444,6 @@ if ($rel_res) {
             });
         }
 
-        /**
-         * Populates the supplier dropdown with a subset of suppliers.
-         * @param {Array<Object>} suppliersArray - Array of supplier objects {id, name}.
-         */
         function populateSupplierSelect(suppliersArray) {
             const select = document.getElementById('supplier_id');
             select.innerHTML = '<option value="0">-- No Supplier / Unknown --</option>';
@@ -506,10 +456,6 @@ if ($rel_res) {
             });
         }
         
-        /**
-         * Filters the supplier dropdown based on the selected Product ID.
-         * @param {string} productId - The ID of the product selected for filtering (or '0' for all).
-         */
         function filterSuppliers(productId) {
             const selectedProductId = parseInt(productId, 10);
             
@@ -519,8 +465,6 @@ if ($rel_res) {
                 return;
             }
 
-            // Get the list of supplier IDs associated with this product
-            // Use String(selectedProductId) because JS object keys (from PHP json_encode) are strings
             const allowedSupplierIds = PRODUCT_SUPPLIER_MAP[String(selectedProductId)] || [];
 
             // Filter ALL_SUPPLIERS
@@ -532,10 +476,6 @@ if ($rel_res) {
             populateSupplierSelect(filteredSuppliers);
         }
 
-        /**
-         * Toggles between selecting an existing supplier and adding a new one.
-         * @param {boolean} isNew - True to show new supplier fields, false to show existing dropdown.
-         */
         function toggleSupplierForm(isNew) {
             const existingDiv = document.getElementById('existingSupplierDiv');
             const newDiv = document.getElementById('newSupplierDiv');

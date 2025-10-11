@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Us - ALG Enterprises</title>
+
+  <!-- Google Font (same as products page) -->
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+
+  <!-- Navbar CSS -->
+  <link rel="stylesheet" href="Css/navbar.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Archivo Black', sans-serif;
+      background-color: #dfe5ef;
+      color: #000;
+    }
+
+    /* ===== HERO SECTION ===== */
+    .about-hero {
+      position: relative;
+      width: 100%;
+      height: 350px;
+      background: url("../images/alg-background.png") center/cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Dark overlay for readability */
+    .about-hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .about-hero h1 {
+      position: relative;
+      font-size: 64px;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 15px 40px;
+      border-radius: 10px;
+      z-index: 1;
+    }
+
+    /* ===== CONTENT ===== */
+    .about-content {
+      max-width: 1100px;
+      margin: 60px auto;
+      padding: 0 20px;
+      font-size: 18px;
+      line-height: 1.8;
+      color: #111;
+    }
+
+    .about-content h2 {
+      font-size: 32px;
+      margin-top: 40px;
+      margin-bottom: 10px;
+      color: #042842;
+    }
+
+    .about-content ul {
+      margin-left: 40px;
+      list-style: disc;
+    }
+
+    .about-content li {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="about.html" class="active">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- ===== HERO IMAGE ===== -->
+  <section class="about-hero">
+    <h1>About Us</h1>
+  </section>
+
+  <!-- ===== ABOUT CONTENT ===== -->
+  <section class="about-content">
+    <h2>ALG Enterprises</h2>
+    <p>
+      ALG Enterprises is a trusted provider of roofing and construction solutions, proudly serving clients across commercial, residential, industrial, and institutional sectors. Since our founding, we have been committed to delivering products and services that meet the highest standards of quality, durability, and customer satisfaction.
+    </p>
+    <p>
+      With years of hands-on experience and a skilled team of professionals, we specialize in metal roofing systems, wall cladding, and on-site roll forming services designed to perform in the most demanding environments. Our projects stand as a testament to our focus on precision, efficiency, and long-term value.
+    </p>
+    <p>
+      We understand that every project is unique. That’s why we work closely with our clients from start to finish, ensuring each solution is tailored to their specific needs, timeline, and budget.
+    </p>
+
+    <h2>Our Mission</h2>
+    <p>
+      To deliver dependable, innovative, and long-lasting roofing and construction solutions through craftsmanship, commitment, and customer focus.
+    </p>
+
+    <h2>Our Vision</h2>
+    <p>
+      To be a leading force in the industry, known for quality, trust, and delivering value to every project we undertake.
+    </p>
+
+    <h2>Why Choose ALG Enterprises?</h2>
+    <ul>
+      <li>Proven expertise across multiple sectors</li>
+      <li>Skilled and reliable workforce</li>
+      <li>State-of-the-art technology, including mobile roll forming</li>
+      <li>Client-focused approach from planning to completion</li>
+      <li>Strong track record of successful projects</li>
+    </ul>
+
+    <p>
+      At ALG Enterprises, we don’t just build structures — we build long-term relationships.
+    </p>
+  </section>
+</body>
+</html>

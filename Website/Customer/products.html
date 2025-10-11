@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALG Enterprises - Projects</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+
+  <!-- Navbar -->
+  <link rel="stylesheet" href="Css/navbar.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Archivo Black', sans-serif;
+      background-color: #dfe5ef;
+      color: #000;
+    }
+
+    /* ===== SEARCH BAR ===== */
+    .top-tools {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 15px 60px;
+    }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      background-color: #c5c1c1;
+      border-radius: 50px;
+      padding: 8px 15px;
+      width: 300px;
+    }
+
+    .search-bar input {
+      border: none;
+      outline: none;
+      background: transparent;
+      flex: 1;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .search-bar input::placeholder {
+      color: #555;
+    }
+
+    /* ===== PAGE CONTENT ===== */
+    h1 {
+      font-family: 'Archivo Black', sans-serif;
+      font-size: 42px;
+      margin: 50px 70px 10px;
+    }
+
+    /* ===== CAROUSEL ===== */
+    .carousel-section {
+      position: relative;
+      margin: 30px 60px 80px;
+    }
+
+    .carousel-container {
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .carousel-inner {
+      display: flex;
+      transition: transform 0.5s ease-in-out;
+      gap: 25px;
+    }
+
+    .product-card {
+      background-color: #cfd0d0;
+      border-radius: 10px;
+      width: calc((100% - 50px) / 3);
+      flex-shrink: 0;
+      text-align: center;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+
+    .product-image {
+      width: 100%;
+      height: 180px;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #eaeaea;
+      margin-bottom: 15px;
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-card h3 {
+      margin: 10px 0 8px;
+      font-size: 20px;
+    }
+
+    .product-card p {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      background-color: #042842;
+      color: #fff;
+      padding: 8px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background-color: #064471;
+    }
+
+    /* ===== ARROWS ===== */
+    .arrow-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background-color: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .arrow-btn:hover {
+      background-color: rgba(0, 0, 0, 0.85);
+    }
+
+    .arrow-left { left: -20px; }
+    .arrow-right { right: -20px; }
+
+    /* ===== MODAL ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      width: 500px;
+      max-width: 90%;
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-content img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 26px;
+      cursor: pointer;
+      color: #333;
+    }
+
+    .close-btn:hover { color: red; }
+
+    @media (max-width: 900px) {
+      .product-card { width: calc((100% - 25px) / 2); }
+    }
+    @media (max-width: 600px) {
+      .product-card { width: 100%; }
+      .arrow-btn { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html" class="active">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- ===== SEARCH BAR ===== -->
+  <div class="top-tools">
+    <div class="search-bar">
+      🔍 <input type="text" placeholder="Search..." />
+    </div>
+  </div>
+
+  <!-- ===== CAROUSEL SECTION ===== -->
+  <section class="carousel-section">
+    <h1>Roofing</h1>
+    <div class="carousel-container">
+      <button class="arrow-btn arrow-left" id="prevBtn">‹</button>
+      <div class="carousel-inner" id="carousel">
+        <div class="product-card">
+          <div class="product-image"><img src="https://via.placeholder.com/300x200?text=Product+1" alt="Product 1"></div>
+          <h3>Product 1</h3>
+          <p>Durable roofing material for all weather conditions.</p>
+          <button class="btn">View Details</button>
+        </div>
+        <div class="product-card">
+          <div class="product-image"><img src="https://via.placeholder.com/300x200?text=Product+2" alt="Product 2"></div>
+          <h3>Product 2</h3>
+          <p>High-quality coated sheet for long-lasting roofs.</p>
+          <button class="btn">View Details</button>
+        </div>
+        <div class="product-card">
+          <div class="product-image"><img src="https://via.placeholder.com/300x200?text=Product+3" alt="Product 3"></div>
+          <h3>Product 3</h3>
+          <p>Modern, sleek, and lightweight roofing solution.</p>
+          <button class="btn">View Details</button>
+        </div>
+        <div class="product-card">
+          <div class="product-image"><img src="https://via.placeholder.com/300x200?text=Product+4" alt="Product 4"></div>
+          <h3>Product 4</h3>
+          <p>Eco-friendly material designed for energy efficiency.</p>
+          <button class="btn">View Details</button>
+        </div>
+      </div>
+      <button class="arrow-btn arrow-right" id="nextBtn">›</button>
+    </div>
+  </section>
+
+  <!-- ===== MODAL ===== -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <img id="modal-img" src="" alt="">
+      <h2 id="modal-title"></h2>
+      <p id="modal-desc"></p>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("load", () => {
+      const carousel = document.getElementById("carousel");
+      const cards = carousel.querySelectorAll(".product-card");
+      const nextBtn = document.getElementById("nextBtn");
+      const prevBtn = document.getElementById("prevBtn");
+
+      let index = 0;
+      const visibleCards = 3;
+      const gap = 25;
+
+      function getCardWidth() {
+        return cards[0].offsetWidth + gap;
+      }
+
+      function updateCarousel() {
+        const cardWidth = getCardWidth();
+        carousel.style.transform = `translateX(-${index * cardWidth}px)`;
+      }
+
+      nextBtn.addEventListener("click", () => {
+        index++;
+        if (index > cards.length - visibleCards) index = 0;
+        updateCarousel();
+      });
+
+      prevBtn.addEventListener("click", () => {
+        index--;
+        if (index < 0) index = cards.length - visibleCards;
+        updateCarousel();
+      });
+
+      window.addEventListener("resize", updateCarousel);
+
+      // ===== MODAL =====
+      const modal = document.getElementById("modal");
+      const modalImg = document.getElementById("modal-img");
+      const modalTitle = document.getElementById("modal-title");
+      const modalDesc = document.getElementById("modal-desc");
+
+      document.querySelectorAll(".product-card .btn").forEach(btn => {
+        btn.addEventListener("click", e => {
+          const card = e.target.closest(".product-card");
+          modalImg.src = card.querySelector("img").src;
+          modalTitle.textContent = card.querySelector("h3").textContent;
+          modalDesc.textContent = card.querySelector("p").textContent;
+          modal.style.display = "flex";
+        });
+      });
+
+      window.closeModal = () => modal.style.display = "none";
+      window.onclick = e => { if (e.target === modal) closeModal(); };
+    });
+  </script>
+</body>
+</html>

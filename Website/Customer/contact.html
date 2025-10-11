@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - ALG Enterprises</title>
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+
+  <!-- Navbar CSS -->
+  <link rel="stylesheet" href="Css/navbar.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Archivo Black', sans-serif;
+      background-color: #dfe5ef;
+      color: #000;
+    }
+
+    /* ===== HERO SECTION ===== */
+    .contact-hero {
+      position: relative;
+      width: 100%;
+      height: 300px;
+      background: url("../images/alg-background.png") center/cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      text-align: center;
+    }
+
+    .contact-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .contact-hero h1 {
+      position: relative;
+      font-size: 64px;
+      z-index: 2;
+    }
+
+    .contact-hero p {
+      position: relative;
+      z-index: 2;
+      font-size: 18px;
+      max-width: 800px;
+      margin: 10px auto 0;
+      line-height: 1.5;
+    }
+
+    /* ===== CONTACT SECTION ===== */
+    .contact-section {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 30px;
+      flex-wrap: wrap;
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 0 20px;
+    }
+
+    .contact-box {
+      flex: 1;
+      min-width: 250px;
+      background-color: rgba(79, 155, 210, 0.8);
+      border-radius: 10px;
+      text-align: center;
+      padding: 40px 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .contact-box:hover {
+      transform: translateY(-5px);
+    }
+
+    .contact-box .icon {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 20px;
+      background-color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .contact-box .icon img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+    }
+
+    .contact-box p {
+      font-size: 18px;
+      color: #000;
+      margin: 10px 0 0;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    @media (max-width: 768px) {
+      .contact-hero h1 {
+        font-size: 42px;
+      }
+      .contact-hero p {
+        font-size: 16px;
+      }
+      .contact-section {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html" class="active">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- ===== HERO SECTION ===== -->
+  <section class="contact-hero">
+    <div>
+      <h1>Contact Us</h1>
+      <p>
+        For questions, technical assistance, or collaboration opportunities,<br>
+        reach out to us via the contact information provided below.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== CONTACT BOXES ===== -->
+  <section class="contact-section">
+    <!-- Phone -->
+    <div class="contact-box">
+      <div class="icon">
+        <img src="../images/phone-icon-black.svg    " alt="Phone Icon">
+      </div>
+      <p>+123-456-7890</p>
+    </div>
+
+    <!-- Address -->
+    <div class="contact-box">
+      <div class="icon">
+        <img src="../images/location-icon-black.svg" alt="Location Icon">
+      </div>
+      <p>123 Anywhere St.,<br> Any City, ST 12345</p>
+    </div>
+
+    <!-- Email -->
+    <div class="contact-box">
+      <div class="icon">
+        <img src="../images/email-icon-black.svg" alt="Email Icon">
+      </div>
+      <p>ALGEnterprises@gmail.com</p>
+    </div>
+  </section>
+
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALG Enterprises - Services</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+
+<!-- Navbar -->
+  <link rel="stylesheet" href="Css/navbar.css">
+  <style>
+    
+    body {
+      margin: 0;
+      font-family: "Roboto Slab", serif;
+      background-color: #f0f3f8;
+      color: #000;
+    }
+    
+    /* ===== MAIN CONTAINER ===== */
+    .services-container {
+      display: flex;
+      gap: 40px;
+      padding: 60px;
+    }
+
+    .service-options {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 280px;
+    }
+
+    .service-btn {
+      background-color: white;
+      border: 2px solid #ccc;
+      padding: 15px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .service-btn.active {
+      background-color: #4f9bd2;
+      color: white;
+      border-color: #4f9bd2;
+    }
+
+    .service-btn:hover {
+      background-color: #4f9bd2;
+      color: white;
+    }
+
+    /* ===== SERVICE CONTENT ===== */
+    .service-content {
+      flex: 3;
+      background-color: white;
+      border-radius: 10px;
+      padding: 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: left;
+    }
+
+    .service-title {
+      font-size: 40px;
+      font-weight: bold;
+      margin: 20px 0 10px 0;
+      align-self: flex-start;
+    }
+
+    .service-desc {
+      font-size: 18px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+      align-self: flex-start;
+    }
+
+    /* ===== CAROUSEL ===== */
+    .carousel {
+      position: relative;
+      width: 100%;
+      height: 350px;
+      overflow: hidden;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .carousel-track {
+      display: flex;
+      transition: transform 1s ease;
+      width: 300%;
+    }
+
+    .carousel-track img {
+      width: 100%;
+      object-fit: cover;
+      flex-shrink: 0;
+      background-color: #ccc;
+      height: 350px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div class="services-container">
+    <!-- Sidebar buttons -->
+    <div class="service-options">
+      <button class="service-btn active" data-service="rollforming">On-site Rollforming</button>
+      <button class="service-btn" data-service="estimates">Roofing Estimates</button>
+      <button class="service-btn" data-service="delivery">Delivery & Installation</button>
+    </div>
+
+    <!-- Service Display Area -->
+    <div class="service-content">
+      <div class="carousel">
+        <div class="carousel-track" id="carousel-track">
+          <img src="../images/picture1.png" alt="Picture 1" />
+          <img src="../images/picture2.png" alt="Picture 2" />
+          <img src="../images/picture3.png" alt="Picture 3" />
+        </div>
+      </div>
+      <div class="service-title">On-site Rollforming</div>
+      <div class="service-desc">
+        Our on-site roll forming service delivers precision-cut panels exactly where you need them — right at your job site. 
+        This ensures better panel protection, fewer delays, and minimal waste, especially for custom lengths and long-span roofing systems.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== SERVICE DATA =====
+    const servicesData = {
+      rollforming: {
+        title: "On-site Rollforming",
+        desc: "Our on-site roll forming service delivers precision-cut panels exactly where you need them — right at your job site. This ensures better panel protection, fewer delays, and minimal waste, especially for custom lengths and long-span roofing systems.",
+        images: ["../images/picture1.png", "../images/picture2.png", "../images/picture3.png"]
+      },
+      estimates: {
+        title: "Roofing Estimates",
+        desc: "We provide detailed roofing estimates to help you plan your project efficiently. Our experienced team ensures accuracy and transparency to give you the best cost-effective solutions.",
+        images: ["../images/picture1.png", "../images/picture2.png", "../images/picture3.png"]
+      },
+      delivery: {
+        title: "Delivery & Installation",
+        desc: "Our reliable delivery and installation services ensure your materials arrive on time and are installed with precision. We make sure every roof we build stands the test of time.",
+        images: ["../images/picture1.png", "../images/picture2.png", "../images/picture3.png"]
+      }
+    };
+
+    // ===== ELEMENTS =====
+    const serviceButtons = document.querySelectorAll(".service-btn");
+    const serviceTitle = document.querySelector(".service-title");
+    const serviceDesc = document.querySelector(".service-desc");
+    const carouselTrack = document.getElementById("carousel-track");
+
+    // ===== SERVICE SWITCH =====
+    serviceButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        serviceButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        const selected = btn.dataset.service;
+        const data = servicesData[selected];
+
+        serviceTitle.textContent = data.title;
+        serviceDesc.textContent = data.desc;
+
+        carouselTrack.innerHTML = "";
+        data.images.forEach(imgSrc => {
+          const img = document.createElement("img");
+          img.src = imgSrc;
+          img.alt = "Service Image";
+          carouselTrack.appendChild(img);
+        });
+
+        currentIndex = 0;
+        carouselTrack.style.transform = "translateX(0)";
+      });
+    });
+
+    // ===== AUTO SLIDE CAROUSEL =====
+    let currentIndex = 0;
+    function autoSlide() {
+      const slides = carouselTrack.children.length;
+      currentIndex = (currentIndex + 1) % slides;
+      carouselTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+    }
+    setInterval(autoSlide, 3000);
+  </script>
+</body>
+</html>

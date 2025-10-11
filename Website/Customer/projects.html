@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALG Enterprises - Projects</title>
+  
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Archivo Black', sans-serif;
+      background-color: #dfe5ef;
+      color: #000;
+    }
+
+    /* ===== PROJECTS SECTION ===== */
+    .projects-section {
+      background-color: #dfe5ef;
+      text-align: center;
+      padding-bottom: 80px;
+    }
+
+    /* ===== PROJECT IMAGE BANNER ===== */
+    .project-banner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      overflow: hidden;
+      gap: 20px;
+      padding: 40px 60px 0;
+      box-sizing: border-box;
+    }
+
+    .banner-card {
+      position: relative;
+      flex: 1;
+      height: 350px;
+      overflow: hidden;
+      cursor: pointer;
+      border-radius: 20px;
+    }
+
+    .banner-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 20px;
+      transition: transform 0.4s ease;
+    }
+
+    .banner-card:hover img {
+      transform: scale(1.05);
+    }
+
+    /* Overlay hover effect */
+    .banner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .banner-card:hover .banner-overlay {
+      opacity: 1;
+    }
+
+    .banner-overlay h3 {
+      margin: 0;
+      font-size: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .banner-overlay button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #4f9bd2;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .banner-overlay button:hover {
+      background-color: #3b82b3;
+    }
+
+    /* ===== PROJECTS TEXT SECTION ===== */
+    .projects-content {
+      padding: 60px 100px 0;
+      text-align: center;
+    }
+
+    .projects-title {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .projects-description {
+      font-size: 18px;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: justify;
+    }
+
+    @media (max-width: 900px) {
+      .project-banner {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .banner-card {
+        width: 100%;
+        height: 250px;
+      }
+
+      .projects-content {
+        padding: 40px 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+    </nav>
+
+  <!-- ===== PROJECT BANNER (IMAGES SIDE BY SIDE) ===== -->
+  <section class="project-banner">
+    <div class="banner-card">
+      <img src="../images/project-pic-1.png" alt="Residential Projects">
+      <div class="banner-overlay">
+        <h3>Residential Projects</h3>
+        <button>View Project</button>
+      </div>
+    </div>
+
+    <div class="banner-card">
+      <img src="../images/project-pic-2.png" alt="Government Projects">
+      <div class="banner-overlay">
+        <h3>Government Projects</h3>
+        <button>View Project</button>
+      </div>
+    </div>
+
+    <div class="banner-card">
+      <img src="../images/project-pic-3.png" alt="Institutional Projects">
+      <div class="banner-overlay">
+        <h3>Institutional Projects</h3>
+        <button>View Project</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS TEXT SECTION -->
+  <section class="projects-section">
+    <div class="projects-content">
+      <h1 class="projects-title">Projects</h1>
+      <div class="projects-description">
+        ALG Enterprises is committed to delivering high-quality roofing and cladding solutions across a wide range of industries—including Commercial, Residential, Industrial, Institutional, Agricultural, and Government sectors. 
+        With a focus on durability, functionality, and aesthetics, our projects are built to withstand harsh environments while meeting the unique requirements of every client.<br><br>
+        Explore our portfolio to see how we bring value and excellence to every build. Whether it’s a large-scale commercial complex, a private residence, a government facility, or an agricultural installation, ALG Enterprises provides roofing systems that perform and last.
+      </div>
+    </div>
+  </section>
+
+</body>
+</html>

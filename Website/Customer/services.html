@@ -13,8 +13,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
 
-<!-- Navbar -->
-  <link rel="stylesheet" href="Css/navbar.css">
   <style>
     
     body {
@@ -22,6 +20,56 @@
       font-family: "Roboto Slab", serif;
       background-color: #f0f3f8;
       color: #000;
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+      padding: 10px 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    nav img {
+      height: 70px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #4f9bd2;
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding-top: 10px;
+      }
     }
     
     /* ===== MAIN CONTAINER ===== */
@@ -120,7 +168,7 @@
   <!-- ===== NAVBAR ===== -->
   <nav class="navbar">
     <div class="navbar-left">
-      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+      <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
     </div>
     <div class="nav-links">
       <a href="home.html">Home</a>
@@ -145,9 +193,9 @@
     <div class="service-content">
       <div class="carousel">
         <div class="carousel-track" id="carousel-track">
-          <img src="../images/picture1.png" alt="Picture 1" />
-          <img src="../images/picture2.png" alt="Picture 2" />
-          <img src="../images/picture3.png" alt="Picture 3" />
+          <img src="../../images/picture1.png" alt="Picture 1" />
+          <img src="../../images/picture2.png" alt="Picture 2" />
+          <img src="../../images/picture3.png" alt="Picture 3" />
         </div>
       </div>
       <div class="service-title">On-site Rollforming</div>
@@ -164,17 +212,17 @@
       rollforming: {
         title: "On-site Rollforming",
         desc: "Our on-site roll forming service delivers precision-cut panels exactly where you need them — right at your job site. This ensures better panel protection, fewer delays, and minimal waste, especially for custom lengths and long-span roofing systems.",
-        images: ["../images/picture1.png", "../images/picture2.png", "../images/picture3.png"]
+        images: ["../../images/picture1.png", "../../images/picture2.png", "../../images/picture3.png"]
       },
       estimates: {
         title: "Roofing Estimates",
         desc: "We provide detailed roofing estimates to help you plan your project efficiently. Our experienced team ensures accuracy and transparency to give you the best cost-effective solutions.",
-        images: ["../images/picture1.png", "../images/picture2.png", "../images/picture3.png"]
+        images: ["../../images/picture1.png", "../../images/picture2.png", "../../images/picture3.png"]
       },
       delivery: {
         title: "Delivery & Installation",
         desc: "Our reliable delivery and installation services ensure your materials arrive on time and are installed with precision. We make sure every roof we build stands the test of time.",
-        images: ["../images/picture1.png", "../images/picture2.png", "../images/picture3.png"]
+        images: ["../../images/picture1.png", "../../images/picture2.png", "../../images/picture3.png"]
       }
     };
 

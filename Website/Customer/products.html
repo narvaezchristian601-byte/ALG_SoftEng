@@ -11,7 +11,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
 
   <!-- Navbar -->
-  <link rel="stylesheet" href="Css/navbar.css">
 
   <style>
     body {
@@ -20,7 +19,56 @@
       background-color: #dfe5ef;
       color: #000;
     }
+nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+      padding: 10px 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-family: 'Archivo Black', sans-serif;
+    }
 
+    nav img {
+      height: 70px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #4f9bd2;
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding-top: 10px;
+      }
+    }
     /* ===== SEARCH BAR ===== */
     .top-tools {
       display: flex;
@@ -207,7 +255,7 @@
   <!-- ===== NAVBAR ===== -->
   <nav class="navbar">
     <div class="navbar-left">
-      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+      <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
     </div>
     <div class="nav-links">
       <a href="home.html">Home</a>

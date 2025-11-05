@@ -1,66 +1,223 @@
 <?php
 session_start();
-if (!isset($_SESSION['Staff_id']) || $_SESSION['Role'] !== 'Admin') {
-  header("Location: ../login.php");
+include("../../db.php");
+
+// ✅ Session check
+if (!isset($_SESSION['Staff_id'])) {
+   echo '<script>
+      alert("Please login first.");
+      window.location.href = "../login.php";
+  </script>';
   exit();
 }
-$name = $_SESSION['Name'];
-?>
 
+
+// ✅ Fetch totals
+$sql = "SELECT
+    (SELECT COUNT(*) FROM supplier) AS total_suppliers,
+    (SELECT COUNT(*) FROM product) AS total_products,
+    (SELECT COUNT(*) FROM customers) AS total_customers";
+$result = $conn->query($sql);
+$totals = $result->fetch_assoc();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - ALG</title>
+  <title>Staff | Home</title>
+
   <style>
     body {
       margin: 0;
-      font-family: 'Inter', sans-serif;
-      background: url("../images/aboutus-image1.png") center/cover no-repeat;
-      height: 100vh;
-      color: #fff;
+      font-family: "Archivo Black", sans-serif;
+      background-color: #888;
+      overflow-x: hidden;
+    }
+
+    /* ======== NAVBAR ======== */
+    .navbar {
+      width: 100%;
+      background: #615e5e;
       display: flex;
-      justify-content: center;
       align-items: center;
-      position: relative;
+      justify-content: space-between;
+      padding: 10px 40px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      box-sizing: border-box;
     }
-    .overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      z-index: 0;
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
     }
-    .container {
-      z-index: 1;
-      background: rgba(17, 17, 17, 0.7);
-      padding: 60px 80px;
-      border-radius: 15px;
-      text-align: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+
+    .nav-logo .logo {
+      height: 75px;
+      width: auto;
+      margin-right: 10px;
     }
-    a {
-      display: inline-block;
-      margin: 15px;
-      padding: 14px 24px;
-      background: #4f9bd2;
+
+    .nav-links a {
+      font-size: 25px;
       color: white;
-      border-radius: 8px;
+      margin: 0 15px;
       text-decoration: none;
-      font-weight: bold;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 20px;
+      transition: 0.3s;
     }
-    a:hover {
-      background: #3a84b8;
+
+    .nav-links a.active {
+      background: #d9d9d9;
+      color: black;
+    }
+
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .nav-right img {
+      width: 28px;
+      height: 28px;
+      filter: invert(1);
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        flex-direction: column;
+        padding: 15px 20px;
+      }
+
+      .nav-links {
+        margin-top: 10px;
+      }
+
+      .nav-links a {
+        display: inline-block;
+        margin: 5px;
+      }
+    }
+
+    /* ======== MAIN CONTENT ======== */
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    /* Hero Section */
+    .hero {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      padding: 30px;
+      max-width: 80%;
+      color: #fff;
+      font-size: 2em;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    /* Dashboard Summary Cards */
+    .dashboard-cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 50px;
+    }
+
+    .card {
+      background: #f4f4f4;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      padding: 25px 40px;
+      text-align: center;
+      min-width: 220px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      color: #222;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #007bff;
+      margin: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero {
+        font-size: 1.5em;
+        padding: 20px;
+      }
+
+      .dashboard-cards {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .card {
+        width: 80%;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="overlay"></div>
-  <div class="container">
-    <h1>Welcome Admin, <?php echo htmlspecialchars($name); ?>!</h1>
-    <p>Manage your system below:</p>
-    <a href="../Staff/projects.php">View All Projects</a>
-    <a href="../logout.php">Logout</a>
-  </div>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="nav-logo">
+      <img src="../../images/alg-logo-black.png" alt="ALG Logo" class="logo">
+    </div>
+    <nav class="nav-links">
+        <a href="home.php" class="active">Home</a>
+        <a href="products.php">Inventory</a>
+        <a href="projects.php">Projects</a>
+        <a href="staff.php">Staff</a>
+    </nav>
+    <div class="nav-right">
+      <a href="../login.php" class="logout">
+        <img src="../../images/log-out.svg" alt="Logout" class="logout-icon">
+      </a>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main>
+    <div class="hero">
+      Your shelter,<br>our responsibility
+    </div>
+
+    <section class="dashboard-cards">
+      <div class="card">
+        <h2>Total Suppliers</h2>
+        <p><?php echo $totals['total_suppliers']; ?></p>
+      </div>
+      <div class="card">
+        <h2>Total Products</h2>
+        <p><?php echo $totals['total_products']; ?></p>
+      </div>
+      <div class="card">
+        <h2>Total Customers</h2>
+        <p><?php echo $totals['total_customers']; ?></p>
+      </div>
+    </section>
+  </main>
+
 </body>
 </html>

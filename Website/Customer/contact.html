@@ -8,8 +8,6 @@
   <!-- Font -->
   <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
 
-  <!-- Navbar CSS -->
-  <link rel="stylesheet" href="Css/navbar.css">
 
   <style>
     body {
@@ -24,12 +22,62 @@
       position: relative;
       width: 100%;
       height: 300px;
-      background: url("../images/alg-background.png") center/cover no-repeat;
+      background: url("../../images/alg-background.png") center/cover no-repeat;
       display: flex;
       justify-content: center;
       align-items: center;
       color: white;
       text-align: center;
+    }
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+      padding: 10px 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    nav img {
+      height: 70px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #4f9bd2;
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding-top: 10px;
+      }
     }
 
     .contact-hero::before {
@@ -126,7 +174,7 @@
   <!-- ===== NAVBAR ===== -->
   <nav class="navbar">
     <div class="navbar-left">
-      <img src="../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+      <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
     </div>
     <div class="nav-links">
       <a href="home.html">Home</a>
@@ -154,7 +202,7 @@
     <!-- Phone -->
     <div class="contact-box">
       <div class="icon">
-        <img src="../images/phone-icon-black.svg    " alt="Phone Icon">
+        <img src="../../images/phone-icon-black.svg    " alt="Phone Icon">
       </div>
       <p>+123-456-7890</p>
     </div>
@@ -162,7 +210,7 @@
     <!-- Address -->
     <div class="contact-box">
       <div class="icon">
-        <img src="../images/location-icon-black.svg" alt="Location Icon">
+        <img src="../../images/location-icon-black.svg" alt="Location Icon">
       </div>
       <p>123 Anywhere St.,<br> Any City, ST 12345</p>
     </div>
@@ -170,7 +218,7 @@
     <!-- Email -->
     <div class="contact-box">
       <div class="icon">
-        <img src="../images/email-icon-black.svg" alt="Email Icon">
+        <img src="../../images/email-icon-black.svg" alt="Email Icon">
       </div>
       <p>ALGEnterprises@gmail.com</p>
     </div>

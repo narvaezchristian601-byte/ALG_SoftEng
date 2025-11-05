@@ -60,6 +60,26 @@ session_start();
             box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
             max-width: 600px;
             width: 90%;
+            margin: 20px auto;
+        }
+        .card a {
+            color: black;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+            display: inline-block;
+            background: white;
+            margin: 10px;
+
+        }
+        .card a:hover {
+            background: #f1f1f1;
+            text-decoration: none;
         }
     </style>
 </head>
@@ -84,8 +104,9 @@ session_start();
 
     <main>
         <div class="card">
-            <h2>Welcome to ALG System</h2>
-            <p>Select a feature from the navigation bar to get started.</p>
+            <a href="Website/Customer/Loadingscreen.html">Customer</a>
+            <a href="Website/Login.php">Staff</a>
+            <a href="Website/Login.php">Admin</a>
         </div>
     </main>
 

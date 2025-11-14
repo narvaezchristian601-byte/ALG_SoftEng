@@ -88,18 +88,6 @@ session_start();
         <h1>ALG Roofing Products & Services System</h1>
     </header>
 
-    <nav>
-        <a href="index.php">Home</a>
-        <a href="orders.php">Orders</a>
-        <a href="products.php">Product Search</a>
-        <a href="supplier_list.php">Supplier List</a>
-        <a href="price_list.php">Price List</a>
-        <a href="orderform.php">Order Form</a>
-        <a href="calendar.php">Schedule Calendar</a>
-        <a href="reports.php">Reports</a>
-        <a href="import_products.php">Import Products</a>
-        <a href="mobile_schedule.php">Mobile Schedule</a>
-    </nav>
 
 
     <main>

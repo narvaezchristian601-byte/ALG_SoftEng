@@ -15,10 +15,11 @@ if (!isset($conn) || $conn->connect_error) {
 $current_year = date('Y');
 $current_month = date('n');
 
-$selected_year = $_GET['filter_year'] ?? $current_year;
-$selected_month = $_GET['filter_month'] ?? $current_month;
+// Sanitize filter inputs
+$selected_year = isset($_GET['filter_year']) && is_numeric($_GET['filter_year']) ? (int)$_GET['filter_year'] : $current_year;
+$selected_month = isset($_GET['filter_month']) && is_numeric($_GET['filter_month']) ? (int)$_GET['filter_month'] : $current_month;
 
-// 1. Get available unique years for the filter - FIXED: Using multiple date sources
+// 1. Get available unique years for the filter
 $years_sql = "
     SELECT DISTINCT YEAR(COALESCE(SS.ScheduleDate, O.order_date, P.StartDate)) AS project_year
     FROM Projects P
@@ -37,7 +38,7 @@ $years_sql = "
 ";
 $years_result = $conn->query($years_sql);
 $available_years = [];
-if ($years_result) {
+if ($years_result && $years_result->num_rows > 0) {
     while ($row = $years_result->fetch_assoc()) {
         $available_years[] = $row['project_year'];
     }
@@ -50,24 +51,34 @@ if (!in_array($current_year, $available_years)) {
 
 // --- Dynamic Query Construction ---
 $where_clauses = ["1=1"]; // Show all projects including completed ones
+$params = [];
+$types = '';
 
-// Add Year filter - FIXED: Using multiple date sources
-if ($selected_year && is_numeric($selected_year)) {
-    $where_clauses[] = "(YEAR(COALESCE(SS.ScheduleDate, O.order_date, P.StartDate)) = " . $conn->real_escape_string($selected_year) . " 
-                        OR YEAR(O.order_date) = " . $conn->real_escape_string($selected_year) . "
-                        OR YEAR(P.StartDate) = " . $conn->real_escape_string($selected_year) . ")";
+// Add Year filter
+if ($selected_year && $selected_year > 0) {
+    $where_clauses[] = "(YEAR(COALESCE(SS.ScheduleDate, O.order_date, P.StartDate)) = ? 
+                        OR YEAR(O.order_date) = ?
+                        OR YEAR(P.StartDate) = ?)";
+    $params[] = $selected_year;
+    $params[] = $selected_year;
+    $params[] = $selected_year;
+    $types .= 'iii';
 }
 
-// Add Month filter - FIXED: Using multiple date sources
-if ($selected_month && is_numeric($selected_month)) {
-    $where_clauses[] = "(MONTH(COALESCE(SS.ScheduleDate, O.order_date, P.StartDate)) = " . $conn->real_escape_string($selected_month) . "
-                        OR MONTH(O.order_date) = " . $conn->real_escape_string($selected_month) . "
-                        OR MONTH(P.StartDate) = " . $conn->real_escape_string($selected_month) . ")";
+// Add Month filter
+if ($selected_month && $selected_month > 0) {
+    $where_clauses[] = "(MONTH(COALESCE(SS.ScheduleDate, O.order_date, P.StartDate)) = ?
+                        OR MONTH(O.order_date) = ?
+                        OR MONTH(P.StartDate) = ?)";
+    $params[] = $selected_month;
+    $params[] = $selected_month;
+    $params[] = $selected_month;
+    $types .= 'iii';
 }
 
 $where_sql = "WHERE " . implode(' AND ', $where_clauses);
 
-// MAIN QUERY: Fetch project info with joined client and staff names - FIXED
+// MAIN QUERY: Fetch ALL projects with joined client and staff names - REMOVED LIMIT
 $sql = "
 SELECT
     P.Project_id,
@@ -95,18 +106,34 @@ $where_sql
 GROUP BY
     P.Project_id, P.Project_Name, AppointmentDate, C.Name, P.Status, P.Total_Cost, O.Payment_id, O.Orders_id
 ORDER BY
-    COALESCE(SS.ScheduleDate, O.order_date, P.StartDate) DESC
-LIMIT 50;
+    COALESCE(SS.ScheduleDate, O.order_date, P.StartDate) DESC,
+    P.Project_id DESC
 ";
 
-$result = $conn->query($sql);
+// Use prepared statement for security
+$stmt = $conn->prepare($sql);
+if ($stmt) {
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    // Fallback to regular query if prepared statement fails
+    $result = $conn->query($sql);
+}
 
 // --- Aggregate Metrics ---
 // Get total project count
+$total_projects = 0;
 $total_projects_sql = "SELECT COUNT(*) AS total_projects FROM Projects";
-$total_projects = ($conn->query($total_projects_sql)->fetch_assoc()['total_projects']) ?? 0;
+$total_result = $conn->query($total_projects_sql);
+if ($total_result) {
+    $total_projects = $total_result->fetch_assoc()['total_projects'];
+}
 
-// Get paid project count - FIXED: Check if Payment_id is not NULL
+// Get paid project count
+$paid_projects = 0;
 $paid_projects_sql = "
     SELECT COUNT(DISTINCT P.Project_id) AS paid_projects
     FROM Projects P
@@ -114,25 +141,27 @@ $paid_projects_sql = "
     WHERE O.Payment_id IS NOT NULL;
 ";
 $paid_projects_result = $conn->query($paid_projects_sql);
-$paid_projects = $paid_projects_result ? $paid_projects_result->fetch_assoc()['paid_projects'] : 0;
+if ($paid_projects_result) {
+    $paid_projects = $paid_projects_result->fetch_assoc()['paid_projects'];
+}
 
 $payment_percentage = ($total_projects > 0) ? round(($paid_projects / $total_projects) * 100) : 0;
 
 // Get status counts
+$status_counts = [];
 $status_counts_sql = "
     SELECT Status, COUNT(*) as count 
     FROM Projects 
     GROUP BY Status
 ";
 $status_counts_result = $conn->query($status_counts_sql);
-$status_counts = [];
-if ($status_counts_result) {
+if ($status_counts_result && $status_counts_result->num_rows > 0) {
     while ($row = $status_counts_result->fetch_assoc()) {
         $status_counts[$row['Status']] = $row['count'];
     }
 }
 
-// Function to get materials used (Products) per project - FIXED
+// Function to get materials used (Products) per project
 function getMaterialsUsed($conn, $project_id) {
     $sql = "
         SELECT
@@ -166,6 +195,12 @@ function getMaterialsUsed($conn, $project_id) {
 function formatProjectId($project_id, $schedule_date) {
     $project_year = date('Y', strtotime($schedule_date ?? date('Y-m-d')));
     return "PRJ-" . $project_year . "-" . str_pad($project_id, 3, '0', STR_PAD_LEFT);
+}
+
+// Get total count for current filtered results
+$filtered_count = 0;
+if ($result) {
+    $filtered_count = $result->num_rows;
 }
 ?>
 <!DOCTYPE html>
@@ -381,12 +416,16 @@ function formatProjectId($project_id, $schedule_date) {
             <div class="metric-card">
                 <div class="metric-label">Status Breakdown:</div>
                 <div class="text-sm">
-                    <?php foreach ($status_counts as $status => $count): ?>
-                        <div class="flex justify-between mb-1">
-                            <span class="status-<?php echo strtolower($status); ?>"><?php echo $status; ?>:</span>
-                            <span class="font-semibold"><?php echo $count; ?></span>
-                        </div>
-                    <?php endforeach; ?>
+                    <?php if (!empty($status_counts)): ?>
+                        <?php foreach ($status_counts as $status => $count): ?>
+                            <div class="flex justify-between mb-1">
+                                <span class="status-<?php echo strtolower($status); ?>"><?php echo htmlspecialchars($status); ?>:</span>
+                                <span class="font-semibold"><?php echo $count; ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="text-gray-500">No status data available</div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -410,7 +449,7 @@ function formatProjectId($project_id, $schedule_date) {
             <select name="filter_year" class="p-2 border border-gray-300 rounded-md bg-white">
                 <option value="">-- All Years --</option>
                 <?php foreach ($available_years as $year): ?>
-                    <option value="<?= $year ?>" <?= ((string)$year === (string)$selected_year) ? 'selected' : '' ?>>
+                    <option value="<?= $year ?>" <?= ($year === $selected_year) ? 'selected' : '' ?>>
                         <?= $year ?>
                     </option>
                 <?php endforeach; ?>
@@ -428,7 +467,7 @@ function formatProjectId($project_id, $schedule_date) {
                     ];
                     foreach ($months as $num => $name):
                 ?>
-                    <option value="<?= $num ?>" <?= ((string)$num === (string)$selected_month) ? 'selected' : '' ?>>
+                    <option value="<?= $num ?>" <?= ($num === $selected_month) ? 'selected' : '' ?>>
                         <?= $name ?>
                     </option>
                 <?php endforeach; ?>
@@ -441,11 +480,19 @@ function formatProjectId($project_id, $schedule_date) {
                 </svg>
                 Filter
             </button>
+
+            <!-- Clear Filters Button -->
+            <?php if (isset($_GET['filter_year']) || isset($_GET['filter_month'])): ?>
+                <a href="projects.php" class="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 text-sm font-medium transition duration-200">
+                    Clear Filters
+                </a>
+            <?php endif; ?>
         </form>
 
         <!-- Other Filter Tags and Large Action Buttons -->
         <div class="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-3 w-full lg:w-auto">
-            <button onclick="window.location.href='appointing.php'" class="action-button bg-gray-700 text-white hover:bg-gray-800 flex-1 lg:flex-none w-full lg:w-auto text-lg p-3">Appointing</button>
+            <button onclick="window.location.href='Project_Logs.php'" class="action-button bg-gray-700 text-white hover:bg-gray-800 flex-1 lg:flex-none w-full lg:w-auto text-lg p-3">Project Logs</button>
+            <button onclick="window.location.href='appointing.php'" class="action-button bg-gray-700 text-white hover:bg-gray-800 flex-1 lg:flex-none w-full lg:w-auto text-lg p-3">Appointment</button>
             <button onclick="window.location.href='management_form.php'" class="action-button bg-gray-700 text-white hover:bg-gray-800 flex-1 lg:flex-none w-full lg:w-auto text-lg p-3">Management Form</button>
         </div>
     </div>
@@ -508,10 +555,14 @@ function formatProjectId($project_id, $schedule_date) {
                 </tbody>
             </table>
             <div class="p-4 flex justify-between items-center text-sm text-gray-500 bg-white border-t">
-                <span>Showing <?php echo $result->num_rows; ?> projects</span>
-                <div>
-                    <button class="px-3 py-1 border rounded-l hover:bg-gray-50">← Previous</button>
-                    <button class="px-3 py-1 border rounded-r hover:bg-gray-50">Next →</button>
+                <span>
+                    Showing <?php echo $filtered_count; ?> project<?php echo $filtered_count !== 1 ? 's' : ''; ?>
+                    <?php if (isset($_GET['filter_year']) || isset($_GET['filter_month'])): ?>
+                        (Filtered from <?php echo $total_projects; ?> total)
+                    <?php endif; ?>
+                </span>
+                <div class="text-sm text-gray-600">
+                    All projects displayed
                 </div>
             </div>
         <?php else: ?>
@@ -537,6 +588,15 @@ function formatProjectId($project_id, $schedule_date) {
 
 </div>
 
-<?php if (isset($conn)) $conn->close(); ?>
+<?php 
+// Close prepared statement if it exists
+if (isset($stmt)) {
+    $stmt->close();
+}
+// Close connection
+if (isset($conn)) {
+    $conn->close();
+}
+?>
 </body>
 </html>

@@ -2,6 +2,37 @@
 include("../../db.php");
 session_start();
 
+// Handle inline updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_field'])) {
+    $product_id = intval($_POST['product_id']);
+    $field = $_POST['field'];
+    $value = $_POST['value'];
+    
+    // Validate field
+    $allowed_fields = ['Reorder_Level', 'Price'];
+    if (in_array($field, $allowed_fields)) {
+        if ($field === 'Price') {
+            $value = floatval($value);
+            $stmt = $conn->prepare("UPDATE Product SET Price = ? WHERE Product_id = ?");
+        } else {
+            $value = intval($value);
+            $stmt = $conn->prepare("UPDATE Product SET Reorder_Level = ? WHERE Product_id = ?");
+        }
+        
+        $stmt->bind_param("di", $value, $product_id);
+        $stmt->execute();
+        $stmt->close();
+        
+        // Redirect back to avoid form resubmission
+        $redirect_url = "products.php?page=" . ($_GET['page'] ?? 1);
+        if (!empty($_GET['search'])) {
+            $redirect_url .= "&search=" . urlencode($_GET['search']);
+        }
+        header("Location: " . $redirect_url);
+        exit;
+    }
+}
+
 // Fetch categories
 $categoryQuery = $conn->query("SELECT Category_id, Name FROM Category ORDER BY Name ASC");
 $categories = $categoryQuery->fetch_all(MYSQLI_ASSOC);
@@ -31,7 +62,7 @@ $requestedDir = strtoupper($_GET['dir'] ?? 'ASC');
 $orderBy = $validColumns[$requestedCol] ?? "p.Name";
 $orderDir = $requestedDir === 'DESC' ? 'DESC' : 'ASC';
 
-// Fetch products
+// Fetch products with UPDATED data
 $stmt = $conn->prepare("
     SELECT p.Product_id, p.Name, c.Name AS CategoryName, p.Price, p.Stock, p.Reorder_Level
     FROM Product p
@@ -57,9 +88,13 @@ $totalRows = $countStmt->get_result()->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 
 function stockStatus($stock, $reorder) {
-    if ($stock <= 0) return "<span class='status out'>Stock Out</span>";
-    elseif ($stock <= $reorder) return "<span class='status low'>Low Stock</span>";
-    else return "<span class='status in'>In Stock</span>";
+    if ($stock <= 0) {
+        return "<span class='status out'>Stock Out</span>";
+    } elseif ($stock <= $reorder) {
+        return "<span class='status low'>Low Stock</span>";
+    } else {
+        return "<span class='status in'>In Stock</span>";
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -206,7 +241,15 @@ function stockStatus($stock, $reorder) {
         background: #bbb;
         cursor: default;
     }
-
+    .ilog-btn {
+        background: #4f9bd2;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
     .add-btn {
         background: #4f9bd2;
         color: white;
@@ -228,52 +271,31 @@ function stockStatus($stock, $reorder) {
     }
     .remove-btn:hover { background: #c9302c; }
 
-    /* Modal */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0; top: 0;
-        width: 100%; height: 100%;
-        background: rgba(0,0,0,0.5);
-        justify-content: center;
-        align-items: center;
+    /* Add styles for inline forms */
+    .inline-form {
+        display: inline;
     }
-    .modal-content {
-        background: white;
-        padding: 25px;
-        border-radius: 8px;
-        width: 400px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    .inline-input {
+        width: 80px;
+        padding: 4px 8px;
+        border: 1px solid #4f9bd2;
+        border-radius: 4px;
+        font-size: 14px;
     }
-    .modal-content h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        text-align: center;
+    .inline-submit {
+        display: none; /* Hide the submit button */
     }
-    .modal-content label {
-        display: block;
-        font-weight: 600;
-        margin-top: 10px;
-    }
-    .modal-content input, .modal-content select, .modal-content textarea {
-        width: 100%;
-        padding: 8px;
-        border-radius: 5px;
-        border: 1px solid #ccc;
-        margin-top: 5px;
-    }
-    .modal-content button {
-        margin-top: 15px;
-        width: 48%;
-        padding: 8px 0;
-        border: none;
-        border-radius: 6px;
+    .editable-field {
         cursor: pointer;
-        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+        border: 1px solid transparent;
     }
-    .btn-save { background: #4f9bd2; color: white; }
-    .btn-cancel { background: #aaa; color: white; }
+    .editable-field:hover {
+        background-color: #f0f8ff;
+        border: 1px dashed #4f9bd2;
+    }
     .logoimage{width: auto; height: 70px;}
 </style>
 </head>
@@ -303,7 +325,10 @@ function stockStatus($stock, $reorder) {
             <form method="get" action="products.php">
                 <input type="text" name="search" placeholder="Search products..." value="<?= htmlspecialchars($searchTerm) ?>">
             </form>
-            <button class="add-btn" id="openModal">+ Add Product</button>
+            <div>
+                <button class="ilog-btn" onclick="window.location.href='inventory_logs.php'">Inventory Logs</button>
+                <button class="add-btn" id="openModal">+ Add Product</button>
+            </div>
         </div>
 
         <table>
@@ -326,9 +351,41 @@ function stockStatus($stock, $reorder) {
                         <td><?= htmlspecialchars($row['Product_id']) ?></td>
                         <td><?= htmlspecialchars($row['Name']) ?></td>
                         <td><?= htmlspecialchars($row['CategoryName'] ?? '-') ?></td>
-                        <td><?= htmlspecialchars($row['Reorder_Level']) ?></td>
+                        <td>
+                            <span class="editable-field" 
+                                  onclick="enableEdit(this, 'Reorder_Level', <?= $row['Product_id'] ?>, <?= $row['Reorder_Level'] ?>)">
+                                <?= htmlspecialchars($row['Reorder_Level']) ?>
+                            </span>
+                            <form method="POST" action="products.php" class="inline-form" style="display:none;" 
+                                  id="form_Reorder_Level_<?= $row['Product_id'] ?>">
+                                <input type="hidden" name="update_field" value="1">
+                                <input type="hidden" name="field" value="Reorder_Level">
+                                <input type="hidden" name="product_id" value="<?= $row['Product_id'] ?>">
+                                <input type="number" name="value" value="<?= $row['Reorder_Level'] ?>" 
+                                       class="inline-input" min="0"
+                                       onblur="this.form.submit()"
+                                       onkeypress="if(event.key === 'Enter') { this.form.submit(); }">
+                                <input type="submit" class="inline-submit">
+                            </form>
+                        </td>
                         <td><?= htmlspecialchars($row['Stock']) ?></td>
-                        <td><?= number_format($row['Price'], 2) ?></td>
+                        <td>
+                            <span class="editable-field" 
+                                  onclick="enableEdit(this, 'Price', <?= $row['Product_id'] ?>, <?= $row['Price'] ?>)">
+                                ₱<?= number_format($row['Price'], 2) ?>
+                            </span>
+                            <form method="POST" action="products.php" class="inline-form" style="display:none;" 
+                                  id="form_Price_<?= $row['Product_id'] ?>">
+                                <input type="hidden" name="update_field" value="1">
+                                <input type="hidden" name="field" value="Price">
+                                <input type="hidden" name="product_id" value="<?= $row['Product_id'] ?>">
+                                <input type="number" name="value" value="<?= $row['Price'] ?>" 
+                                       class="inline-input" min="0" step="0.01"
+                                       onblur="this.form.submit()"
+                                       onkeypress="if(event.key === 'Enter') { this.form.submit(); }">
+                                <input type="submit" class="inline-submit">
+                            </form>
+                        </td>
                         <td><?= stockStatus($row['Stock'], $row['Reorder_Level']) ?></td>
                         <td>
                             <button 
@@ -348,6 +405,9 @@ function stockStatus($stock, $reorder) {
 
         <div class="pagination">
             <form method="get" style="display:flex;gap:10px;">
+                <?php if (isset($searchTerm) && $searchTerm !== ''): ?>
+                    <input type="hidden" name="search" value="<?= htmlspecialchars($searchTerm) ?>">
+                <?php endif; ?>
                 <button type="submit" name="page" value="<?= max(1, $page - 1) ?>" <?= $page <= 1 ? 'disabled' : '' ?>>← Previous</button>
                 <button type="submit" name="page" value="<?= $page + 1 ?>" <?= $page >= $totalPages ? 'disabled' : '' ?>>Next →</button>
             </form>
@@ -415,6 +475,22 @@ function stockStatus($stock, $reorder) {
 </div>
 
 <script>
+// Simple function to switch from display span to edit form
+function enableEdit(spanElement, field, productId, currentValue) {
+    // Hide the span
+    spanElement.style.display = 'none';
+    
+    // Show the form
+    const form = document.getElementById('form_' + field + '_' + productId);
+    form.style.display = 'inline';
+    
+    // Focus and select the input
+    const input = form.querySelector('input[type="number"]');
+    input.focus();
+    input.select();
+}
+
+// Modal functions
 const modal = document.getElementById('productModal');
 document.getElementById('openModal').onclick = () => modal.style.display = 'flex';
 document.getElementById('closeModal').onclick = () => modal.style.display = 'none';
@@ -441,4 +517,3 @@ window.onclick = e => { if (e.target === removeModal) removeModal.style.display 
 
 </body>
 </html>
-

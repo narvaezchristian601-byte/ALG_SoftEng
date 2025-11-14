@@ -176,6 +176,7 @@ $totals = $result->fetch_assoc();
       }
     }
   </style>
+
 </head>
 <body>
 

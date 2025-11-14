@@ -7,55 +7,76 @@ if (!isset($conn) || $conn->connect_error) {
     die("Database connection failed. Please check ../../db.php.");
 }
 
+// Generate CSRF token if not exists
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// --- Helper Functions ---
+
+/**
+ * Execute prepared statement with consistent error handling
+ */
+function executeStatement($stmt, $errorMessage) {
+    if (!$stmt->execute()) {
+        error_log("SQL Error: " . $stmt->error);
+        throw new Exception($errorMessage);
+    }
+    return true;
+}
+
+/**
+ * Verify if source record exists
+ */
+function verifySourceExists($conn, $source_id, $source_type) {
+    $sql = "SELECT sched_id FROM appointment_sched WHERE sched_id = ?";
+    
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) return false;
+    
+    $stmt->bind_param("i", $source_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    return (bool)$result;
+}
+
 // --- Data Fetching ---
 
-// 1. Fetch all Appointments/Orders that need attention - FIXED QUERY
+// 1. Fetch only Appointments (Schedules) that need attention - REMOVED ORDERS
 $sql_appointments = "
-    SELECT
-        O.Orders_id,
-        ss.ScheduleDate AS schedule_date,
-        C.Name AS ClientName,
-        O.Status,
-        P.Project_id,
-        S.Name AS ServiceName,
-        'Order' AS SourceType
-    FROM
-        Orders O
-    JOIN
-        Customers C ON O.customer_id = C.customer_id
-    LEFT JOIN
-        Services S ON O.Services_id = S.Services_id
-    LEFT JOIN
-        appointment_sched ss ON O.Orders_id = ss.Services_id
-    LEFT JOIN
-        Projects P ON O.Orders_id = P.Orders_id
-    WHERE
-        O.Status IN ('Pending', 'Ongoing', 'Completed')
-    
-    UNION ALL
-    
+    -- Schedules without projects
     SELECT
         ss.sched_id AS Orders_id,
         ss.ScheduleDate AS schedule_date,
         c.Name AS ClientName,
+        c.PhoneNumber AS ClientPhone,
         'Scheduled' AS Status,
         ss.project_id AS Project_id,
-        COALESCE(s.Name, ss.appointment_type) AS ServiceName,
+        COALESCE(ss.appointment_type, 'Appointment') AS ServiceName,
         'Schedule' AS SourceType
     FROM
         appointment_sched ss
     JOIN
         Customers c ON ss.customer_id = c.customer_id
     LEFT JOIN
-        Services s ON ss.Services_id = s.Services_id
+        Projects P ON ss.project_id = P.Project_id
     WHERE
         ss.ScheduleDate IS NOT NULL
-    
+        AND (ss.project_id IS NULL OR ss.project_id = 0 OR P.Project_id IS NULL)
     ORDER BY
         schedule_date ASC
     LIMIT 8;
 ";
+
 $appointments_result = $conn->query($sql_appointments);
+if (!$appointments_result) {
+    error_log("Appointments query failed: " . $conn->error);
+    $appointments_result = null;
+} else {
+    error_log("Debug: Found " . $appointments_result->num_rows . " appointments needing project creation");
+}
 
 // 2. Fetch all Staff for the assignment modal, INCLUDING POSITION
 $sql_staff = "SELECT Staff_id, Name, Position FROM Staff ORDER BY Name ASC";
@@ -65,122 +86,206 @@ if ($staff_result) {
     while ($row = $staff_result->fetch_assoc()) {
         $all_staff[] = $row;
     }
-}
-
-/**
- * 3. Function to get current staff assigned to a project
- */
-function getCurrentStaff($conn, $project_id) {
-    if (!$project_id) return [];
-    
-    $sql = "
-        SELECT S.Staff_id, S.Name
-        FROM Staff S
-        JOIN ProjectStaff PS ON S.Staff_id = PS.Staff_id
-        WHERE PS.Project_id = ?
-    ";
-    
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        error_log("Prepare failed in getCurrentStaff: " . $conn->error);
-        return [];
-    }
-    $stmt->bind_param("i", $project_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $current_staff = [];
-    while ($row = $res->fetch_assoc()) {
-        $current_staff[] = $row;
-    }
-    if (isset($stmt)) $stmt->close();
-    return $current_staff;
+} else {
+    error_log("Staff query failed: " . $conn->error);
 }
 
 // --- Handle Project Creation POST Request ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'create_project') {
-        $orders_id = $_POST['orders_id'] ?? null; 
-        $source_type = $_POST['source_type'] ?? 'Order';
         
-        if (is_numeric($orders_id)) {
-            // Start Transaction for Data Safety
-            $conn->begin_transaction();
-            try {
-                // PROJECT CREATION LOGIC
-                
-                // First, let's check if a project already exists for this order/schedule
-                $check_sql = "SELECT Project_id FROM Projects WHERE Orders_id = ?";
-                $check_stmt = $conn->prepare($check_sql);
-                $check_stmt->bind_param("i", $orders_id);
-                $check_stmt->execute();
-                $existing_project = $check_stmt->get_result()->fetch_assoc();
-                
-                if ($existing_project) {
-                    // Project already exists, redirect to it
-                    header("Location: management_form.php?id=" . $existing_project['Project_id']);
-                    exit;
-                } else {
-                    // Calculate total cost from order items if it's an order
-                    $total_cost = 0;
-                    if ($source_type === 'Order') {
-                        $cost_sql = "
-                            SELECT COALESCE(SUM(oi.quantity * oi.price), 0) as total 
-                            FROM orderitems oi 
-                            WHERE oi.Orders_id = ?
-                        ";
-                        $cost_stmt = $conn->prepare($cost_sql);
-                        $cost_stmt->bind_param("i", $orders_id);
-                        $cost_stmt->execute();
-                        $cost_result = $cost_stmt->get_result()->fetch_assoc();
-                        $total_cost = $cost_result['total'] ?? 0;
-                    }
-
-                    // Create new project - FIXED: Removed project_name column
-                    $insert_project_sql = "INSERT INTO Projects (Orders_id, StartDate, Total_Cost, Status) VALUES (?, NOW(), ?, 'Pending')";
-                    
-                    $stmt = $conn->prepare($insert_project_sql);
-                    $stmt->bind_param("id", $orders_id, $total_cost);
-                    $stmt->execute();
-                    
-                    // Get the ID of the newly created project
-                    $new_project_id = $conn->insert_id;
-
-                    if (!$new_project_id) {
-                        throw new Exception("Failed to create new Project record.");
-                    }
-
-                    // If this was from a schedule, update the schedule with the project ID
-                    if ($source_type === 'Schedule') {
-                        $update_schedule_sql = "UPDATE appointment_sched SET project_id = ? WHERE sched_id = ?";
-                        $update_stmt = $conn->prepare($update_schedule_sql);
-                        $update_stmt->bind_param("ii", $new_project_id, $orders_id);
-                        $update_stmt->execute();
-                    }
-                    
-                    $conn->commit();
-                    
-                    // Redirect to management form with the new project ID
-                    header("Location: management_form.php?id=" . $new_project_id);
-                    exit;
-                }
-                
-            } catch (Exception $e) {
-                $conn->rollback();
-                // Store error in session to display after redirect
-                $_SESSION['error'] = 'Project creation failed: ' . $e->getMessage();
-                header("Location: " . $_SERVER['PHP_SELF']);
+        // CSRF Protection
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+            $_SESSION['error'] = 'Invalid security token.';
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        
+        // Input validation and sanitization
+        $source_id = $_POST['orders_id'] ?? null; 
+        $source_type = 'Schedule'; // Force to Schedule only
+        $project_name = trim($_POST['project_name'] ?? '');
+        
+        // Validate project name
+        if (empty($project_name)) {
+            $_SESSION['error'] = 'Project name is required.';
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        
+        if (!is_numeric($source_id) || $source_id <= 0) {
+            $_SESSION['error'] = 'Invalid appointment ID provided.';
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        
+        $source_id = (int)$source_id;
+        
+        // Verify source exists
+        if (!verifySourceExists($conn, $source_id, $source_type)) {
+            $_SESSION['error'] = 'Appointment record not found.';
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
+        }
+        
+        // Start Transaction for Data Safety
+        $conn->begin_transaction();
+        try {
+            // Check if a project already exists
+            $check_sql = "SELECT Project_id FROM Projects WHERE Project_id IN (SELECT project_id FROM appointment_sched WHERE sched_id = ?)";
+            
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param("i", $source_id);
+            executeStatement($check_stmt, "Failed to check existing project");
+            $existing_project = $check_stmt->get_result()->fetch_assoc();
+            $check_stmt->close();
+            
+            if ($existing_project) {
+                // Project already exists, redirect to it
+                $conn->commit();
+                header("Location: management_form.php?id=" . $existing_project['Project_id']);
                 exit;
             }
+            
+            // Calculate total cost and get project details
+            $total_cost = 0;
+            $orders_id_for_project = NULL;
+            $customer_id = NULL;
+            
+            // Get schedule details
+            $schedule_sql = "
+                SELECT ss.sched_id, ss.customer_id, c.Name as client_name, COALESCE(ss.appointment_type, 'Appointment') as service_name, ss.Services_id
+                FROM appointment_sched ss 
+                JOIN Customers c ON ss.customer_id = c.customer_id 
+                WHERE ss.sched_id = ?
+            ";
+            $schedule_stmt = $conn->prepare($schedule_sql);
+            $schedule_stmt->bind_param("i", $source_id);
+            executeStatement($schedule_stmt, "Failed to fetch schedule details");
+            $schedule_details = $schedule_stmt->get_result()->fetch_assoc();
+            $schedule_stmt->close();
+            
+            if ($schedule_details) {
+                $customer_id = $schedule_details['customer_id'];
+                
+                // For schedules, we need to create an Order first since Projects.Orders_id cannot be NULL
+                $services_id = $schedule_details['Services_id'];
+                
+                // If Services_id is NULL, use a default valid service
+                if (!$services_id) {
+                    $default_service_sql = "SELECT Services_id FROM Services LIMIT 1";
+                    $default_service_result = $conn->query($default_service_sql);
+                    if ($default_service_result && $default_service_result->num_rows > 0) {
+                        $default_service = $default_service_result->fetch_assoc();
+                        $services_id = $default_service['Services_id'];
+                    } else {
+                        throw new Exception("No services available in the system. Please add services first.");
+                    }
+                }
+                
+                // Verify the service exists
+                $verify_service_sql = "SELECT Services_id FROM Services WHERE Services_id = ?";
+                $verify_service_stmt = $conn->prepare($verify_service_sql);
+                $verify_service_stmt->bind_param("i", $services_id);
+                executeStatement($verify_service_stmt, "Service verification failed");
+                $service_exists = $verify_service_stmt->get_result()->fetch_assoc();
+                $verify_service_stmt->close();
+                
+                if (!$service_exists) {
+                    throw new Exception("Invalid service ID. Please check service configuration.");
+                }
+                
+                // Validate customer_id exists
+                if (!$customer_id) {
+                    throw new Exception("No customer associated with this schedule. Please check schedule configuration.");
+                }
+                
+                // Verify customer exists
+                $verify_customer_sql = "SELECT customer_id FROM Customers WHERE customer_id = ?";
+                $verify_customer_stmt = $conn->prepare($verify_customer_sql);
+                $verify_customer_stmt->bind_param("i", $customer_id);
+                executeStatement($verify_customer_stmt, "Customer verification failed");
+                $customer_exists = $verify_customer_stmt->get_result()->fetch_assoc();
+                $verify_customer_stmt->close();
+                
+                if (!$customer_exists) {
+                    throw new Exception("Invalid customer ID. Please check customer configuration.");
+                }
+                
+                $create_order_sql = "
+                    INSERT INTO Orders (Services_id, customer_id, total_amount, order_date, status, stock_adjusted, Payment_id) 
+                    VALUES (?, ?, 0, NOW(), 'Pending', 0, NULL)
+                ";
+                $order_stmt = $conn->prepare($create_order_sql);
+                $order_stmt->bind_param("ii", $services_id, $customer_id);
+                executeStatement($order_stmt, "Failed to create order for schedule");
+                $orders_id_for_project = $conn->insert_id;
+                $order_stmt->close();
+            } else {
+                throw new Exception("Appointment not found.");
+            }
+
+            // Validate that we have all required data before creating project
+            if (!$orders_id_for_project) {
+                throw new Exception("Failed to obtain valid Orders_id for project creation.");
+            }
+            
+            if (!$customer_id) {
+                throw new Exception("No customer associated with this project. Please check data configuration.");
+            }
+
+            // Prevent race condition with row locking
+            $lock_sql = "SELECT Orders_id FROM Orders WHERE Orders_id = ? FOR UPDATE";
+            $lock_stmt = $conn->prepare($lock_sql);
+            $lock_stmt->bind_param("i", $orders_id_for_project);
+            executeStatement($lock_stmt, "Failed to acquire lock");
+            $lock_stmt->close();
+
+            // Create new project
+            $insert_project_sql = "INSERT INTO Projects (Project_Name, Orders_id, StartDate, Total_Cost, Status) VALUES (?, ?, NOW(), ?, 'Pending')";
+            
+            $stmt = $conn->prepare($insert_project_sql);
+            $stmt->bind_param("sid", $project_name, $orders_id_for_project, $total_cost);
+            executeStatement($stmt, "Failed to create project");
+            
+            // Get the ID of the newly created project
+            $new_project_id = $conn->insert_id;
+
+            if (!$new_project_id) {
+                throw new Exception("Failed to get new Project ID.");
+            }
+
+            // Update the schedule with the project ID
+            $update_schedule_sql = "UPDATE appointment_sched SET project_id = ? WHERE sched_id = ?";
+            $update_stmt = $conn->prepare($update_schedule_sql);
+            $update_stmt->bind_param("ii", $new_project_id, $source_id);
+            executeStatement($update_stmt, "Failed to update schedule");
+            $update_stmt->close();
+            
+            $conn->commit();
+            
+            // Log successful project creation
+            error_log("Project created successfully: ID $new_project_id from appointment $source_id");
+            
+            // Redirect to management form with the new project ID
+            header("Location: management_form.php?id=" . $new_project_id);
+            exit;
+            
+        } catch (Exception $e) {
+            $conn->rollback();
+            error_log("Project creation error: " . $e->getMessage());
+            $_SESSION['error'] = 'Project creation failed. Please try again.';
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit;
         }
     }
 }
 
 // Function to format Appointment ID
-function formatApptId($orders_id, $date_str, $source_type = 'Order') {
+function formatApptId($sched_id, $date_str) {
     if (!$date_str) return "APPT-XXXX-N/A";
     $year = date('Y', strtotime($date_str));
-    $prefix = $source_type === 'Schedule' ? 'SCH' : 'ORD';
-    return "{$prefix}-" . $year . "-" . str_pad($orders_id, 4, '0', STR_PAD_LEFT);
+    return "SCH-" . $year . "-" . str_pad($sched_id, 4, '0', STR_PAD_LEFT);
 }
 
 // Function to format date and time
@@ -189,11 +294,24 @@ function formatDateTime($date_str) {
     return date('M j, Y h:iA', strtotime($date_str));
 }
 
-// Function to format Project ID
-function formatProjectId($project_id, $schedule_date) {
-    if (!$project_id) return null;
-    $project_year = date('Y', strtotime($schedule_date ?? date('Y-m-d')));
-    return "PRJ-" . $project_year . "-" . str_pad($project_id, 3, '0', STR_PAD_LEFT);
+// Function to format phone number
+function formatPhoneNumber($phone) {
+    if (!$phone) return 'N/A';
+    // Remove any non-numeric characters
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    
+    // Format as (XXX) XXX-XXXX if it's 10 digits
+    if (strlen($phone) === 10) {
+        return '(' . substr($phone, 0, 3) . ') ' . substr($phone, 3, 3) . '-' . substr($phone, 6);
+    }
+    
+    // Format as +X (XXX) XXX-XXXX if it's 11 digits starting with 1
+    if (strlen($phone) === 11 && $phone[0] === '1') {
+        return '+1 (' . substr($phone, 1, 3) . ') ' . substr($phone, 4, 3) . '-' . substr($phone, 7);
+    }
+    
+    // Return as is if it doesn't match expected formats
+    return $phone;
 }
 ?>
 <!DOCTYPE html>
@@ -201,7 +319,7 @@ function formatProjectId($project_id, $schedule_date) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ALG | Appointing Records</title>
+<title>ALG | Appointment Records</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
@@ -274,34 +392,7 @@ function formatProjectId($project_id, $schedule_date) {
         border-bottom: none;
     }
 
-    /* Status Coloring - UPDATED for actual status values */
-    .status-Completed {
-        color: #059669;
-        font-weight: 600;
-        background-color: #d1fae5;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.5rem;
-        display: inline-block;
-        font-size: 0.8rem;
-    }
-    .status-Ongoing {
-        color: #D97706;
-        font-weight: 600;
-        background-color: #fef3c7;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.5rem;
-        display: inline-block;
-        font-size: 0.8rem;
-    }
-    .status-Pending {
-        color: #2563EB;
-        font-weight: 600;
-        background-color: #eff6ff;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.5rem;
-        display: inline-block;
-        font-size: 0.8rem;
-    }
+    /* Status Coloring */
     .status-Scheduled {
         color: #7C3AED;
         font-weight: 600;
@@ -362,19 +453,89 @@ function formatProjectId($project_id, $schedule_date) {
         border: 1px solid #bbf7d0;
     }
 
-    .source-badge {
-        font-size: 0.7rem;
-        padding: 0.1rem 0.4rem;
-        border-radius: 0.25rem;
-        margin-left: 0.5rem;
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
     }
-    .source-order {
-        background-color: #dbeafe;
-        color: #1e40af;
+    .modal-content {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
-    .source-schedule {
-        background-color: #f3e8ff;
-        color: #7c3aed;
+    .modal-header {
+        margin-bottom: 1rem;
+    }
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .modal-body {
+        margin-bottom: 1.5rem;
+    }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #374151;
+    }
+    .form-input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+    }
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-primary {
+        background-color: #10B981;
+        color: white;
+        border: none;
+    }
+    .btn-primary:hover {
+        background-color: #059669;
+    }
+    .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+        border: none;
+    }
+    .btn-secondary:hover {
+        background-color: #4b5563;
+    }
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 </style>
 </head>
@@ -407,13 +568,13 @@ function formatProjectId($project_id, $schedule_date) {
     <!-- Display Error Messages -->
     <?php if (isset($_SESSION['error'])): ?>
         <div class="alert alert-error">
-            <?= $_SESSION['error'] ?>
+            <?= htmlspecialchars($_SESSION['error']) ?>
             <?php unset($_SESSION['error']); ?>
         </div>
     <?php endif; ?>
 
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Service & Appointment Assignments</h1>
+        <h1 class="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Appointment Assignments</h1>
         <div class="flex flex-wrap space-x-2 space-y-2 md:space-y-0">
              <button onclick="window.location.href='projects.php'" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition">← Return to Projects</button>
              <button onclick="window.location.href='management_form.php'" class="px-4 py-2 bg-gray-600 text-white rounded-lg shadow-md hover:bg-gray-700 transition">Management Form</button>
@@ -422,7 +583,7 @@ function formatProjectId($project_id, $schedule_date) {
         </div>
     </div>
 
-    <!-- Appointing Table -->
+    <!-- Appointments Table -->
     <div class="table-container">
         <div class="overflow-x-auto">
         <?php if ($appointments_result && $appointments_result->num_rows > 0): ?>
@@ -431,64 +592,48 @@ function formatProjectId($project_id, $schedule_date) {
                     <tr>
                         <th>Appointment ID</th>
                         <th>Client</th>
-                        <th>Project ID</th> 
+                        <th>Phone Number</th>
                         <th>Service Type</th> 
                         <th>Date & Time</th>
-                        <th>Staff Assigned</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php while($row = $appointments_result->fetch_assoc()):
-                    $appt_id = formatApptId($row['Orders_id'], $row['schedule_date'], $row['SourceType']);
+                    $appt_id = formatApptId($row['Orders_id'], $row['schedule_date']);
                     $appt_datetime = formatDateTime($row['schedule_date']);
-                    $status_class = "status-" . str_replace(' ', '', $row['Status']);
-                    $orders_id = $row['Orders_id'];
+                    $status_class = "status-Scheduled";
+                    $source_id = $row['Orders_id'];
                     $project_id = $row['Project_id'];
                     $project_type = $row['ServiceName']; 
-                    $source_type = $row['SourceType'];
                     $is_project_missing = empty($project_id);
-
-                    // Get currently assigned staff
-                    $current_staff = getCurrentStaff($conn, $project_id);
-                    $staff_names = implode(', ', array_map(fn($s) => htmlspecialchars($s['Name']), $current_staff));
+                    $phone_number = formatPhoneNumber($row['ClientPhone']);
                 ?>
                     <tr>
                         <td class="font-semibold text-indigo-700">
                             <?= htmlspecialchars($appt_id) ?>
-                            <span class="source-badge source-<?= strtolower($source_type) ?>"><?= $source_type ?></span>
                         </td>
                         <td><?= htmlspecialchars($row['ClientName']) ?></td>
                         <td>
-                            <?php if ($project_id): ?>
-                                <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded"><?= htmlspecialchars($project_id) ?></span>
-                            <?php else: ?>
-                                <span class="text-red-500 font-medium text-xs">Missing</span>
-                            <?php endif; ?>
+                            <span class="text-gray-600 text-sm"><?= htmlspecialchars($phone_number) ?></span>
                         </td>
                         <td>
                             <span class="text-gray-600 text-sm"><?= htmlspecialchars($project_type) ?></span>
                         </td>
                         <td><?= htmlspecialchars($appt_datetime) ?></td>
-                        <td>
-                            <span class="text-gray-600 text-sm italic">
-                                <?= $project_id ? ($staff_names ?: 'Unassigned') : 'N/A' ?>
-                            </span>
-                        </td>
                         <td><span class="<?= $status_class ?>"><?= htmlspecialchars($row['Status']) ?></span></td>
                         <td>
                             <div class="flex space-x-2">
                                 <?php if ($is_project_missing): ?>
-                                    <!-- Create Project Form -->
-                                    <form method="POST" action="" style="display: inline;">
-                                        <input type="hidden" name="action" value="create_project">
-                                        <input type="hidden" name="orders_id" value="<?= $orders_id ?>">
-                                        <input type="hidden" name="source_type" value="<?= $source_type ?>">
-                                        <button type="submit" class="action-button create-btn">
-                                            Assign
-                                        </button>
-                                    </form>
+                                    <!-- Create Project Button that opens modal -->
+                                    <button type="button" 
+                                            class="action-button create-btn create-project-btn"
+                                            data-source-id="<?= $source_id ?>"
+                                            data-client-name="<?= htmlspecialchars($row['ClientName']) ?>"
+                                            data-service-type="<?= htmlspecialchars($project_type) ?>">
+                                        Create Project
+                                    </button>
                                 <?php else: ?>
                                     <!-- Direct link to management form for existing projects -->
                                     <a href="management_form.php?id=<?= $project_id ?>" class="action-button manage-btn">
@@ -505,24 +650,129 @@ function formatProjectId($project_id, $schedule_date) {
                 Showing next 8 appointments | <a href="#" class="text-indigo-600 hover:underline ml-1">View All</a>
             </div>
         <?php else: ?>
-            <p class="p-8 text-center text-gray-500 text-lg">No appointments found requiring staff assignment.</p>
+            <div class="p-8 text-center text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No appointments found</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    All appointments have been assigned to projects or there are no pending appointments.
+                </p>
+            </div>
         <?php endif; ?>
         </div>
     </div>
 </div>
 
+<!-- Create Project Modal -->
+<div id="createProjectModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Create New Project</h3>
+        </div>
+        <div class="modal-body">
+            <form id="createProjectForm" method="POST" action="">
+                <input type="hidden" name="action" value="create_project">
+                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                <input type="hidden" name="orders_id" id="modal_orders_id">
+                <input type="hidden" name="source_type" value="Schedule">
+                
+                <div class="form-group">
+                    <label class="form-label">Client</label>
+                    <input type="text" id="modal_client_name" class="form-input" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Service Type</label>
+                    <input type="text" id="modal_service_type" class="form-input" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label required-field">Project Name</label>
+                    <input type="text" name="project_name" id="modal_project_name" class="form-input" required 
+                           placeholder="Enter project name...">
+                    <small class="text-gray-500">This name will be used to identify the project</small>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" id="confirmCreateBtn" onclick="submitProjectForm()">Create Project</button>
+        </div>
+    </div>
+</div>
+
 <script>
-// Simple confirmation for project creation
+// Enhanced confirmation for project creation
 document.addEventListener('DOMContentLoaded', function() {
-    const createForms = document.querySelectorAll('form[action=""]');
+    const createButtons = document.querySelectorAll('.create-project-btn');
     
-    createForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const button = this.querySelector('button[type="submit"]');
-            button.disabled = true;
-            button.textContent = 'Assigning...';
+    createButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const sourceId = this.getAttribute('data-source-id');
+            const clientName = this.getAttribute('data-client-name');
+            const serviceType = this.getAttribute('data-service-type');
+            
+            openModal(sourceId, clientName, serviceType);
         });
     });
+    
+    // Display any PHP errors in console for debugging
+    <?php if (isset($_SESSION['error'])): ?>
+        console.error('Project creation error:', '<?= addslashes($_SESSION['error']) ?>');
+    <?php endif; ?>
+});
+
+function openModal(sourceId, clientName, serviceType) {
+    const modal = document.getElementById('createProjectModal');
+    document.getElementById('modal_orders_id').value = sourceId;
+    document.getElementById('modal_client_name').value = clientName;
+    document.getElementById('modal_service_type').value = serviceType;
+    
+    // Set default project name
+    const defaultProjectName = serviceType + ' - ' + clientName;
+    document.getElementById('modal_project_name').value = defaultProjectName;
+    
+    modal.style.display = 'flex';
+    document.getElementById('modal_project_name').focus();
+}
+
+function closeModal() {
+    const modal = document.getElementById('createProjectModal');
+    modal.style.display = 'none';
+    document.getElementById('createProjectForm').reset();
+}
+
+function submitProjectForm() {
+    const projectName = document.getElementById('modal_project_name').value.trim();
+    const confirmBtn = document.getElementById('confirmCreateBtn');
+    
+    if (!projectName) {
+        alert('Please enter a project name.');
+        document.getElementById('modal_project_name').focus();
+        return;
+    }
+    
+    // Disable button and show loading state
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Creating...';
+    
+    // Submit the form
+    document.getElementById('createProjectForm').submit();
+}
+
+// Close modal when clicking outside
+document.getElementById('createProjectModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
 });
 </script>
 

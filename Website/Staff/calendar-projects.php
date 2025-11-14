@@ -1,14 +1,18 @@
 <?php
 // project_calendar.php (Calendar View)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 include "../../db.php";
 session_start();
 
-// Ensure $conn is valid
+// Enhanced connection check
 if (!isset($conn) || $conn->connect_error) {
+    error_log("Database connection failed: " . ($conn->connect_error ?? 'Unknown error'));
     die("Database connection failed. Please check ../../db.php.");
 }
 
-// 1. DATA SYNCHRONIZATION: Fetch events from Projects table with related data
+// 1. DATA SYNCHRONIZATION: Fetch events from Projects table with schedule data from appointment_sched
 $events = [];
 $sql = "
     SELECT 
@@ -16,8 +20,7 @@ $sql = "
         p.Orders_id,
         p.Status,
         p.Total_Cost,
-        p.Project_Name,
-        a.ScheduleDate as schedule_date,
+        ss.ScheduleDate as schedule_date,
         o.status as order_status,
         s.Name AS ServiceName,
         c.Name AS CustomerName
@@ -25,82 +28,54 @@ $sql = "
     LEFT JOIN Orders o ON p.Orders_id = o.Orders_id
     LEFT JOIN Services s ON o.Services_id = s.Services_id
     LEFT JOIN Customers c ON o.customer_id = c.customer_id
-    LEFT JOIN appointment_sched a ON p.Project_id = a.project_id
-    WHERE a.ScheduleDate IS NOT NULL
-    ORDER BY a.ScheduleDate ASC
+    LEFT JOIN appointment_sched ss ON (o.Services_id = ss.Services_id OR p.Project_id = ss.project_id)
+    WHERE ss.ScheduleDate IS NOT NULL
+    ORDER BY ss.ScheduleDate ASC
 ";
+
+error_log("Executing SQL: " . $sql);
+
 $result = $conn->query($sql);
 
-if ($result && $result->num_rows > 0) {
+if ($result === false) {
+    error_log("SQL Error: " . $conn->error);
+    // Continue with empty events rather than dying
+} else {
     while ($row = $result->fetch_assoc()) {
         // Determine status class for styling - use project status instead of order status
         $statusClass = strtolower($row['Status'] ?? 'pending');
         
+        // Format date for FullCalendar
+        $scheduleDate = $row['schedule_date'];
+        
         $events[] = [
             "id" => (int)$row['Project_id'], // Use Project_id as the ID
-            "title" => ($row['CustomerName'] ?? 'N/A') . ' - ' . ($row['ServiceName'] ?? 'Service'),
-            "start" => $row['schedule_date'],
+            "title" => ($row['CustomerName'] ?? 'N/A') . ' - ' . ($row['ServiceName'] ?? 'Service') . ' (' . ($row['Status'] ?? 'N/A') . ')',
+            "start" => $scheduleDate,
             "extendedProps" => [
                 "project_id" => $row['Project_id'],
                 "order_id" => $row['Orders_id'],
                 "name" => $row['CustomerName'] ?? 'N/A',
                 "service" => $row['ServiceName'] ?? 'Service',
                 "status" => $row['Status'] ?? 'N/A',
-                "total_cost" => $row['Total_Cost'] ?? '0.00',
-                "project_name" => $row['Project_Name'] ?? 'N/A'
+                "total_cost" => $row['Total_Cost'] ?? '0.00'
             ],
             // FullCalendar uses 'className' for event styling
             "className" => 'status-' . $statusClass 
         ];
     }
-} else {
-    // If no scheduled projects, try to get projects with order dates as fallback
-    $fallback_sql = "
-        SELECT 
-            p.Project_id,
-            p.Orders_id,
-            p.Status,
-            p.Total_Cost,
-            p.Project_Name,
-            o.order_date as schedule_date,
-            s.Name AS ServiceName,
-            c.Name AS CustomerName
-        FROM Projects p
-        LEFT JOIN Orders o ON p.Orders_id = o.Orders_id
-        LEFT JOIN Services s ON o.Services_id = s.Services_id
-        LEFT JOIN Customers c ON o.customer_id = c.customer_id
-        WHERE o.order_date IS NOT NULL
-        ORDER BY o.order_date ASC
-    ";
-    
-    $fallback_result = $conn->query($fallback_sql);
-    if ($fallback_result && $fallback_result->num_rows > 0) {
-        while ($row = $fallback_result->fetch_assoc()) {
-            $statusClass = strtolower($row['Status'] ?? 'pending');
-            
-            $events[] = [
-                "id" => (int)$row['Project_id'],
-                "title" => ($row['CustomerName'] ?? 'N/A') . ' - ' . ($row['ServiceName'] ?? 'Service'),
-                "start" => $row['schedule_date'],
-                "extendedProps" => [
-                    "project_id" => $row['Project_id'],
-                    "order_id" => $row['Orders_id'],
-                    "name" => $row['CustomerName'] ?? 'N/A',
-                    "service" => $row['ServiceName'] ?? 'Service',
-                    "status" => $row['Status'] ?? 'N/A',
-                    "total_cost" => $row['Total_Cost'] ?? '0.00',
-                    "project_name" => $row['Project_Name'] ?? 'N/A'
-                ],
-                "className" => 'status-' . $statusClass 
-            ];
-        }
-    }
 }
+
+error_log("Events found: " . count($events));
 
 if (isset($conn)) $conn->close(); 
 
 // Use JSON_HEX_TAG|JSON_HEX_AMP for security when echoing JSON into HTML/JS
 $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
+if ($events_json === false) {
+    $events_json = '[]';
+    error_log("JSON encode error: " . json_last_error_msg());
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -247,6 +222,7 @@ $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
             margin: 0 auto;
         }
 
+        /* Status Styles for Calendar Events */
         .status-pending { 
             background-color: #f7e07e !important; 
             border-color: #f5d13d !important; 
@@ -262,19 +238,10 @@ $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
             border-color: #3df545 !important; 
             color: #3c763d !important;
         }
-        .status-cancelled,
-        .status-dismissed { 
+        .status-cancelled { 
             background-color: #f77e7e !important; 
             border-color: #f53d3d !important; 
             color: #a94442 !important;
-        }
-
-        /* No Events Message */
-        .no-events {
-            text-align: center;
-            padding: 3rem;
-            color: #6b7280;
-            font-size: 1.1rem;
         }
 
         /* Modal Styles */
@@ -340,6 +307,13 @@ $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
             width: 120px;
         }
 
+        .no-events {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+            font-style: italic;
+        }
+
     </style>
 </head>
 <body>
@@ -350,7 +324,6 @@ $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
         <div class="logo">ALG Enterprises</div>
         <ul class="nav-links">
             <li><a href="home.php">Home</a></li>
-            <li><a href="inventory.php">Inventory</a></li>
             <li><a href="projects.php">Projects</a></li>
             <li><a href="staff.php">Staff</a></li>
         </ul>
@@ -368,20 +341,10 @@ $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
         </div>
     </div>
 
+
     <!-- Calendar Container -->
     <div class="calendar-container">
-        <?php if (empty($events)): ?>
-            <div class="no-events">
-                <h3>No Scheduled Projects Found</h3>
-                <p>There are no projects with scheduled dates in the system.</p>
-                <p>Projects will appear here once they have scheduled dates in appointments or order dates.</p>
-                <a href="projects.php" class="btn btn-primary" style="margin-top: 1rem;">
-                    Go to Projects to Schedule
-                </a>
-            </div>
-        <?php else: ?>
-            <div id='calendar'></div>
-        <?php endif; ?>
+        <div id='calendar'></div>
     </div>
 </div>
 
@@ -394,91 +357,118 @@ $events_json = json_encode($events, JSON_HEX_TAG|JSON_HEX_AMP);
         </div>
         <div class="modal-body">
             <p><strong>Project ID:</strong> <span id="modalProjectId"></span></p>
-            <p><strong>Project Name:</strong> <span id="modalProjectName"></span></p>
             <p><strong>Order ID:</strong> <span id="modalOrderId"></span></p>
             <p><strong>Service:</strong> <span id="modalService"></span></p>
             <p><strong>Customer:</strong> <span id="modalCustomer"></span></p>
             <p><strong>Date/Time:</strong> <span id="modalDate"></span></p>
             <p><strong>Status:</strong> <span id="modalStatus"></span></p>
-            <p><strong>Total Cost:</strong> ₱<span id="modalTotalCost"></span></p>
-            <div style="margin-top: 1.5rem; text-align: center;">
-                <a href="#" id="modalManageLink" class="btn btn-primary">Manage Project</a>
-            </div>
+            <p><strong>Total Cost:</strong> $<span id="modalTotalCost"></span></p>
         </div>
     </div>
 </div>
 
-<?php if (!empty($events)): ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const calendarEl = document.getElementById('calendar');
   let currentEvent = null;
 
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek'
-    },
-    firstDay: 1,
-    events: <?php echo $events_json; ?>,
-    
-    eventClick: function(info) {
-      currentEvent = info.event;
-      
-      const projectId = info.event.id;
-      const orderId = info.event.extendedProps.order_id;
-      const customer = info.event.extendedProps.name;
-      const service = info.event.extendedProps.service;
-      const status = info.event.extendedProps.status;
-      const totalCost = info.event.extendedProps.total_cost;
-      const projectName = info.event.extendedProps.project_name;
-      const start = info.event.start;
+  console.log('Calendar events:', <?php echo $events_json; ?>);
 
-      // Populate Modal Fields
-      document.getElementById('modalProjectId').textContent = projectId || "N/A";
-      document.getElementById('modalProjectName').textContent = projectName || "N/A";
-      document.getElementById('modalOrderId').textContent = orderId || "N/A";
-      document.getElementById('modalCustomer').textContent = customer || "N/A";
-      document.getElementById('modalService').textContent = service || "N/A";
-      document.getElementById('modalStatus').textContent = status || "N/A";
-      document.getElementById('modalTotalCost').textContent = totalCost || "0.00";
+  try {
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listWeek'
+      },
+      firstDay: 1,
+      navLinks: true,
+      dayMaxEvents: true,
+      nowIndicator: true,
       
-      // Format date nicely
-      if (start) {
+      eventClick: function(info) {
+        currentEvent = info.event;
+        
+        const projectId = info.event.id;
+        const orderId = info.event.extendedProps.order_id;
+        const customer = info.event.extendedProps.name;
+        const service = info.event.extendedProps.service;
+        const status = info.event.extendedProps.status;
+        const totalCost = info.event.extendedProps.total_cost;
+        const start = info.event.start;
+
+        console.log('Event clicked:', info.event);
+
+        // Populate Modal Fields
+        document.getElementById('modalProjectId').textContent = projectId || "N/A";
+        document.getElementById('modalOrderId').textContent = orderId || "N/A";
+        document.getElementById('modalCustomer').textContent = customer || "N/A";
+        document.getElementById('modalService').textContent = service || "N/A";
+        
+        // Format date nicely
+        if (start) {
           const formattedDate = start.toLocaleString('en-US', { 
-              year: 'numeric', 
-              month: 'short', 
-              day: 'numeric', 
-              hour: '2-digit', 
-              minute: '2-digit', 
-              hour12: true 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
           });
           document.getElementById('modalDate').textContent = formattedDate;
-      } else {
+        } else {
           document.getElementById('modalDate').textContent = 'N/A';
+        }
+
+        // Show the modal
+        document.getElementById('eventModal').style.display = 'flex';
+      },
+
+      events: <?php echo $events_json; ?>,
+
+      // Handle case when no events are found
+      eventDidMount: function(info) {
+        console.log('Event mounted:', info.event);
       }
-      
-      // Link to the management form using Project ID
-      document.getElementById('modalManageLink').href = `management_form.php?id=${projectId}`;
-
-      // Show the modal
-      document.getElementById('eventModal').style.display = 'flex';
-    }
-  });
-
-  calendar.render();
-
-  // Style calendar buttons to match theme
-  setTimeout(function() {
-    document.querySelectorAll('.fc-button').forEach(btn => {
-      btn.style.background = '#1e40af';
-      btn.style.color = '#fff';
-      btn.style.borderColor = '#1e40af';
-      btn.style.fontWeight = '500';
     });
-  }, 100);
+
+    calendar.render();
+
+    // Style calendar buttons to match theme
+    setTimeout(function() {
+      document.querySelectorAll('.fc-button').forEach(btn => {
+        btn.style.background = '#1e40af';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#1e40af';
+        btn.style.fontWeight = '500';
+        btn.style.borderRadius = '6px';
+        btn.style.margin = '2px';
+        
+        // Hover effect
+        btn.addEventListener('mouseenter', function() {
+          this.style.background = '#1e3a8a';
+        });
+        btn.addEventListener('mouseleave', function() {
+          this.style.background = '#1e40af';
+        });
+      });
+    }, 100);
+
+    // Show message if no events
+    if (<?php echo count($events); ?> === 0) {
+      const calendarContainer = document.querySelector('.calendar-container');
+      const noEventsMsg = document.createElement('div');
+      noEventsMsg.className = 'no-events';
+      noEventsMsg.innerHTML = '<p>No scheduled projects found. Projects will appear here when they have scheduled dates in the system.</p>';
+      calendarContainer.appendChild(noEventsMsg);
+    }
+
+  } catch (error) {
+    console.error('Calendar initialization error:', error);
+    const calendarContainer = document.querySelector('.calendar-container');
+    calendarContainer.innerHTML = '<div class="no-events"><p>Error loading calendar. Please check the console for details.</p></div>';
+  }
 });
 
 function closeModal() {
@@ -492,8 +482,14 @@ window.onclick = function(event) {
         closeModal();
     }
 }
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeModal();
+    }
+});
 </script>
-<?php endif; ?>
 
 </body>
 </html>

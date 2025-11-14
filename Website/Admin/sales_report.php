@@ -27,6 +27,56 @@ $summary = [
 $salesData = [];
 $db_error = null;
 
+// Handle Excel Export
+if (isset($_GET['export']) && $_GET['export'] === 'excel') {
+    try {
+        $pdo = new PDO($dsn, $user, $pass, $options);
+        
+        // Fetch all sales data for Excel export (not just last 5)
+        $stmt = $pdo->prepare("
+            SELECT
+                DATE_FORMAT(o.order_date, '%Y-%m-%d') AS date,
+                o.Orders_id AS invoice,
+                cust.Name AS client,
+                COALESCE(p.Name, s.Name) AS item,
+                oi.quantity AS qty,
+                (oi.quantity * oi.price) AS total,
+                o.status AS status
+            FROM Orders o
+            JOIN Customers cust ON o.customer_id = cust.customer_id
+            JOIN orderitems oi ON o.Orders_id = oi.Orders_id
+            LEFT JOIN Product p ON oi.product_id = p.Product_id
+            LEFT JOIN Services s ON oi.services_id = s.Services_id
+            ORDER BY o.order_date DESC
+        ");
+        $stmt->execute();
+        $excelData = $stmt->fetchAll();
+        
+        // Set headers for Excel download
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="sales_report_' . date('Y-m-d') . '.xls"');
+        
+        // Excel content
+        echo "Sales Report - " . date('F j, Y') . "\n\n";
+        echo "Date\tInvoice #\tClient\tItem/Service\tQuantity\tLine Total\tStatus\n";
+        
+        foreach ($excelData as $row) {
+            echo $row['date'] . "\t";
+            echo $row['invoice'] . "\t";
+            echo $row['client'] . "\t";
+            echo $row['item'] . "\t";
+            echo $row['qty'] . "\t";
+            echo '₱' . number_format($row['total'], 2) . "\t";
+            echo $row['status'] . "\n";
+        }
+        exit;
+        
+    } catch (PDOException $e) {
+        // If export fails, continue with normal page load
+        error_log("Excel Export Error: " . $e->getMessage());
+    }
+}
+
 try {
     // This line (now around line 28) previously caused the error because $dsn, $user, and $pass were undefined.
     $pdo = new PDO($dsn, $user, $pass, $options);
@@ -191,6 +241,34 @@ function get_status_class(string $status): string {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
             border-radius: 0.75rem; /* rounded-xl from Tailwind */
         }
+
+        /* Print-specific styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .content, .content * {
+                visibility: visible;
+            }
+            .content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+                background: white;
+            }
+            .sidebar, header, .flex.justify-between.items-start.mb-6.border-b.pb-4 {
+                display: none !important;
+            }
+            .sales-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            button {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -266,12 +344,18 @@ function get_status_class(string $status): string {
                     <p class="text-xs text-gray-500 mt-1">Detailed Line Items from Recent Orders</p>
                 </div>
                 <div class="flex space-x-3">
-                    <button class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+                    <button onclick="window.print()" class="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
                         Print
                     </button>
-                    <button class="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-sm hover:bg-blue-700 transition-colors">
-                        Download Report
-                    </button>
+                    <a href="?export=excel" class="flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg shadow-sm hover:bg-green-700 transition-colors">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Export to Excel
+                    </a>
                 </div>
             </div>
 
@@ -330,6 +414,18 @@ function get_status_class(string $status): string {
     </section>
 
 </div>
+
+<script>
+// Additional print enhancement
+document.addEventListener('DOMContentLoaded', function() {
+    // Add print functionality with better formatting
+    window.printReport = function() {
+        window.print();
+    };
+    
+    // You can add more print customization here if needed
+});
+</script>
 
 </body>
 </html>

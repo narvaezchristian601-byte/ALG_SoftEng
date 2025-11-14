@@ -298,12 +298,11 @@ if (isset($_GET['export']) && $_GET['export'] == '1') {
 
       <div class="project-controls">
         <div class="left-controls">
-          <button><img src="../../images/calendar.svg" alt="Calendar" style="height:18px;"> View Calendar</button>
+          <button onclick="window.location.href='calendar-projects.php'"><img src="../../images/calendar.svg" alt="Calendar" style="height:18px;"> View Calendar</button>
         </div>
         <div class="right-controls">
           <a href="projects-logs.php" class="project-btn">Project Logs</a>
-          <button class="print-btn" onclick="window.open('?export=1', '_blank')">
-            <img src="../../images/print.svg" alt="Print" style="height:18px;"> Print
+          <button class="print-btn" onclick="window.open('?export=1', '_blank')"> Export to Excel
           </button>
         </div>
       </div>

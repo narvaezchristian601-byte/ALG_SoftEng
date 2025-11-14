@@ -256,7 +256,7 @@ function renderStatus($status) {
                 <tr>
                     <th>Import ID</th>
                     <th>Supplier</th>
-                    <th>Product</th>
+                    <th>Products</th>
                     <th>Quantity</th>
                     <th>Unit Price (₱)</th>
                     <th>Total (₱)</th>

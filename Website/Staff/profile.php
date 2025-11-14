@@ -30,19 +30,7 @@ if ($result->num_rows === 1) {
 // Prevent undefined index error
 $staff['Skills'] = isset($staff['Skills']) ? $staff['Skills'] : 'N/A';
 
-// // ✅ Fetch latest customer comment from successful project (using projects table)
-// $commentQuery = "
-//   SELECT client_feedback AS comment_text, completion_date AS date_posted, project_name
-//   FROM projects
-//   WHERE status = 'Successful' AND staff_id = ?
-//   ORDER BY completion_date DESC
-//   LIMIT 1
-// ";
-// $commentStmt = $conn->prepare($commentQuery);
-// $commentStmt->bind_param("i", $staff_id);
-// $commentStmt->execute();
-// $commentResult = $commentStmt->get_result();
-// $comment = $commentResult->fetch_assoc();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

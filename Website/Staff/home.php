@@ -2,7 +2,7 @@
 session_start();
 include("../../db.php");
 
-// ✅ Session check
+// Session check
 if (!isset($_SESSION['Staff_id'])) {
    echo '<script>
       alert("Please login first.");
@@ -12,7 +12,7 @@ if (!isset($_SESSION['Staff_id'])) {
 }
 
 
-// ✅ Fetch totals
+// Fetch totals
 $sql = "SELECT
     (SELECT COUNT(*) FROM supplier) AS total_suppliers,
     (SELECT COUNT(*) FROM product) AS total_products,

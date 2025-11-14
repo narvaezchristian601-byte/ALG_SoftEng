@@ -5,22 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ALG Enterprises - Services</title>
 
-  <!-- Google Font -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto+Slab:wght@300;400;700&display=swap" rel="stylesheet">
 
   <style>
-    
     body {
       margin: 0;
       font-family: "Roboto Slab", serif;
       background-color: #f0f3f8;
       color: #000;
     }
+    
     nav {
       display: flex;
       align-items: center;
@@ -96,6 +93,7 @@
       font-size: 18px;
       cursor: pointer;
       transition: 0.3s;
+      font-family: 'Archivo Black', sans-serif;
     }
 
     .service-btn.active {
@@ -129,6 +127,7 @@
       font-weight: bold;
       margin: 20px 0 10px 0;
       align-self: flex-start;
+      font-family: 'Archivo Black', sans-serif;
     }
 
     .service-desc {
@@ -150,16 +149,35 @@
 
     .carousel-track {
       display: flex;
-      transition: transform 1s ease;
-      width: 300%;
+      transition: transform 0.5s ease;
+      height: 100%;
     }
 
     .carousel-track img {
       width: 100%;
       object-fit: cover;
       flex-shrink: 0;
-      background-color: #ccc;
+      background-color: #eaeaea;
       height: 350px;
+    }
+
+    /* Responsive design */
+    @media (max-width: 900px) {
+      .services-container {
+        flex-direction: column;
+        padding: 30px;
+      }
+      
+      .service-options {
+        max-width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        padding-bottom: 10px;
+      }
+      
+      .service-btn {
+        white-space: nowrap;
+      }
     }
   </style>
 </head>
@@ -173,8 +191,9 @@
     <div class="nav-links">
       <a href="home.html">Home</a>
       <a href="products.html">Products</a>
-      <a href="services.html">Services</a>
+      <a href="services.html" class="active">Services</a>
       <a href="projects.html">Projects</a>
+      <a href="scheduling.php">Scheduling</a>
       <a href="about.html">About Us</a>
       <a href="contact.html">Contact Us</a>
     </div>
@@ -193,9 +212,9 @@
     <div class="service-content">
       <div class="carousel">
         <div class="carousel-track" id="carousel-track">
-          <img src="../../images/picture1.png" alt="Picture 1" />
-          <img src="../../images/picture2.png" alt="Picture 2" />
-          <img src="../../images/picture3.png" alt="Picture 3" />
+          <img src="../../images/picture1.png" alt="On-site Rollforming Service" onerror="this.src='https://via.placeholder.com/800x350?text=Service+Image'" />
+          <img src="../../images/picture2.png" alt="On-site Rollforming Service" onerror="this.src='https://via.placeholder.com/800x350?text=Service+Image'" />
+          <img src="../../images/picture3.png" alt="On-site Rollforming Service" onerror="this.src='https://via.placeholder.com/800x350?text=Service+Image'" />
         </div>
       </div>
       <div class="service-title">On-site Rollforming</div>
@@ -232,6 +251,10 @@
     const serviceDesc = document.querySelector(".service-desc");
     const carouselTrack = document.getElementById("carousel-track");
 
+    // ===== CAROUSEL VARIABLES =====
+    let currentIndex = 0;
+    let slideInterval;
+
     // ===== SERVICE SWITCH =====
     serviceButtons.forEach(btn => {
       btn.addEventListener("click", () => {
@@ -244,27 +267,57 @@
         serviceTitle.textContent = data.title;
         serviceDesc.textContent = data.desc;
 
+        // Update carousel images
         carouselTrack.innerHTML = "";
         data.images.forEach(imgSrc => {
           const img = document.createElement("img");
           img.src = imgSrc;
-          img.alt = "Service Image";
+          img.alt = data.title + " Service";
+          img.onerror = function() {
+            this.src = 'https://via.placeholder.com/800x350?text=Service+Image';
+          };
           carouselTrack.appendChild(img);
         });
 
+        // Reset carousel position and restart auto-slide
         currentIndex = 0;
-        carouselTrack.style.transform = "translateX(0)";
+        updateCarousel();
+        restartAutoSlide();
       });
     });
 
-    // ===== AUTO SLIDE CAROUSEL =====
-    let currentIndex = 0;
-    function autoSlide() {
-      const slides = carouselTrack.children.length;
-      currentIndex = (currentIndex + 1) % slides;
-      carouselTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+    // ===== CAROUSEL FUNCTIONS =====
+    function updateCarousel() {
+      const slideWidth = 100 / carouselTrack.children.length;
+      carouselTrack.style.transform = `translateX(-${currentIndex * slideWidth}%)`;
     }
-    setInterval(autoSlide, 3000);
+
+    function nextSlide() {
+      const totalSlides = carouselTrack.children.length;
+      currentIndex = (currentIndex + 1) % totalSlides;
+      updateCarousel();
+    }
+
+    function startAutoSlide() {
+      slideInterval = setInterval(nextSlide, 3000);
+    }
+
+    function stopAutoSlide() {
+      clearInterval(slideInterval);
+    }
+
+    function restartAutoSlide() {
+      stopAutoSlide();
+      startAutoSlide();
+    }
+
+    // Pause auto-slide on hover
+    carouselTrack.addEventListener('mouseenter', stopAutoSlide);
+    carouselTrack.addEventListener('mouseleave', startAutoSlide);
+
+    // Initialize carousel
+    updateCarousel();
+    startAutoSlide();
   </script>
 </body>
 </html>

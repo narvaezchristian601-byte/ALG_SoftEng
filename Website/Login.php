@@ -2,42 +2,103 @@
 session_start();
 include("../db.php");
 
+// Enable error reporting for debugging (remove in production)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Only process login if it's a POST request
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-  $email = $_POST['email'];
-  $password = $_POST['password'];
+    $email = $_POST['email'];
+    $password = $_POST['password'];
 
-  $sql = "SELECT * FROM Staff WHERE Email = ?";
-  $stmt = $conn->prepare($sql);
-  $stmt->bind_param("s", $email);
-  $stmt->execute();
-  $result = $stmt->get_result();
-
-  if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
-
-    // For now, direct plain password check (if you haven't hashed yet)
-    if ($password === $user['Password']) {
-      $_SESSION['Staff_id'] = $user['Staff_id'];
-      $_SESSION['Name'] = $user['Name'];
-      $_SESSION['Email'] = $user['Email'];
-      $_SESSION['Role'] = $user['Role'];
-
-      if ($user['Role'] === 'Admin') {
-        header("Location: ../Website/Admin/home.php");
-      } else {
-        header("Location: ../Website/Staff/home.php");
-      }
-      exit();
-    } else {
-      echo "<script>alert('Incorrect password.'); window.history.back();</script>";
+    // Basic validation
+    if (empty($email) || empty($password)) {
+        echo "<script>alert('Please fill in all fields.'); window.history.back();</script>";
+        exit();
     }
-  } else {
-    echo "<script>alert('No account found with that email.'); window.history.back();</script>";
-  }
 
-  $stmt->close();
-  $conn->close();
+    // Check if connection is established
+    if ($conn->connect_error) {
+        die("Database connection failed: " . $conn->connect_error);
+    }
+
+    $sql = "SELECT * FROM staff WHERE Email = ?";
+    $stmt = $conn->prepare($sql);
+    
+    if (!$stmt) {
+        die("Prepare failed: " . $conn->error);
+    }
+    
+    $stmt->bind_param("s", $email);
+    
+    if (!$stmt->execute()) {
+        die("Execute failed: " . $stmt->error);
+    }
+    
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+
+        // Check password - handle both plain text and hashed passwords
+        $password_valid = false;
+        
+        // Check if password is hashed (starts with $2y$)
+        if (strpos($user['Password'], '$2y$') === 0) {
+            // Password is hashed - use password_verify
+            if (password_verify($password, $user['Password'])) {
+                $password_valid = true;
+            }
+        } else {
+            // Password is plain text - direct comparison (for existing data)
+            if ($password === $user['Password']) {
+                $password_valid = true;
+                
+                // Optional: Upgrade to hashed password
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                $update_sql = "UPDATE staff SET Password = ? WHERE Staff_id = ?";
+                $update_stmt = $conn->prepare($update_sql);
+                $update_stmt->bind_param("si", $hashed_password, $user['Staff_id']);
+                $update_stmt->execute();
+                $update_stmt->close();
+            }
+        }
+
+        if ($password_valid) {
+            $_SESSION['Staff_id'] = $user['Staff_id'];
+            $_SESSION['Name'] = $user['Name'];
+            $_SESSION['Email'] = $user['Email'];
+            $_SESSION['Role'] = $user['Role'];
+            $_SESSION['Position'] = $user['Position'];
+
+            // Redirect based on role
+            if ($user['Role'] === 'Admin') {
+                header("Location: ../Website/Admin/home.php");
+            } elseif ($user['Role'] === 'Staff') {
+                header("Location: ../Website/Staff/home.php");
+            } else {
+                // Default redirect if role is not recognized
+                header("Location: ../Website/dashboard.php");
+            }
+            exit();
+        } else {
+            echo "<script>
+                alert('Incorrect password.'); 
+                window.history.back();
+            </script>";
+        }
+    } else {
+        echo "<script>
+            alert('No account found with that email.'); 
+            window.history.back();
+        </script>";
+    }
+
+    $stmt->close();
+    $conn->close();
+    exit(); // Stop here after processing POST request
 }
+// If it's a GET request, continue to display the HTML form below
 ?>
 
 <!DOCTYPE html>
@@ -74,7 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     .login-container {
       position: relative;
       z-index: 1;
-      background: rgba(17, 17, 17, 0.75);
+      background: rgba(61, 60, 60, 0.75);
       padding: 60px 80px;
       border-radius: 20px;
       text-align: center;

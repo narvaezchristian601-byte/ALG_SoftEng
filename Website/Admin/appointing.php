@@ -26,7 +26,7 @@ $sql_appointments = "
     LEFT JOIN
         Services S ON O.Services_id = S.Services_id
     LEFT JOIN
-        service_sched ss ON O.Orders_id = ss.Services_id
+        appointment_sched ss ON O.Orders_id = ss.Services_id
     LEFT JOIN
         Projects P ON O.Orders_id = P.Orders_id
     WHERE
@@ -43,7 +43,7 @@ $sql_appointments = "
         COALESCE(s.Name, ss.appointment_type) AS ServiceName,
         'Schedule' AS SourceType
     FROM
-        service_sched ss
+        appointment_sched ss
     JOIN
         Customers c ON ss.customer_id = c.customer_id
     LEFT JOIN
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
                     // If this was from a schedule, update the schedule with the project ID
                     if ($source_type === 'Schedule') {
-                        $update_schedule_sql = "UPDATE service_sched SET project_id = ? WHERE sched_id = ?";
+                        $update_schedule_sql = "UPDATE appointment_sched SET project_id = ? WHERE sched_id = ?";
                         $update_stmt = $conn->prepare($update_schedule_sql);
                         $update_stmt->bind_param("ii", $new_project_id, $orders_id);
                         $update_stmt->execute();

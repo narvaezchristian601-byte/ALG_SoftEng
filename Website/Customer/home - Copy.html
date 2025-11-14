@@ -5,10 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ALG Enterprises</title>
 
-<!-- Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto+Slab:wght@300;400;700&family=Rubik+Dirt&display=swap" rel="stylesheet">
+<!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
 
 <style>
 body {
@@ -201,8 +204,6 @@ body {
   }
 }
 </style>
-
-
 </head>
 <body>
 
@@ -212,11 +213,11 @@ body {
       <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
     </div>
     <div class="nav-links">
-      <a href="home.html" class="active">Home</a>
+      <a href="home.html">Home</a>
       <a href="products.html">Products</a>
       <a href="services.html">Services</a>
       <a href="projects.html">Projects</a>
-      <a href="appointment.php">Schedule Appointment</a>
+      <a href="scheduling.php">Schedule</a>
       <a href="about.html">About Us</a>
       <a href="contact.html">Contact Us</a>
     </div>
@@ -247,76 +248,37 @@ body {
 
   <!-- Dots -->
   <div class="page-dots">
-    <div class="dot active" data-slide="0"></div>
-    <div class="dot" data-slide="1"></div>
-    <div class="dot" data-slide="2"></div>
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
   </div>
 
   <!-- Lower Section -->
   <div class="lower-section">
-    <div class="box box-1">
-      <h3>Why Choose ALG?</h3>
-      <p>With years of experience and a commitment to excellence, we deliver roofing solutions that stand the test of time. Our team combines expertise with quality materials.</p>
-    </div>
-    <div class="box box-2">
-      <h3>Get Started Today</h3>
-      <p>Ready to begin your roofing project? Contact us for a free consultation and estimate. We're here to bring your vision to life.</p>
-    </div>
+    <div class="box"></div>
+    <div class="box"></div>
   </div>
 
+
+<!-- === JAVASCRIPT CAROUSEL LOGIC === -->
 <script>
-  // Carousel Logic
-  const slides = document.querySelectorAll('.hero-text');
-  const dots = document.querySelectorAll('.dot');
-  let currentSlide = 0;
-  let slideInterval;
+const slides = document.querySelectorAll('.hero-text');
+const dots = document.querySelectorAll('.dot');
+let currentSlide = 0;
 
-  function showSlide(index) {
-    // Validate index
-    if (index < 0) index = slides.length - 1;
-    if (index >= slides.length) index = 0;
-    
-    currentSlide = index;
-    
-    slides.forEach((slide, i) => {
-      slide.classList.toggle('active', i === index);
-    });
-    
-    dots.forEach((dot, i) => {
-      dot.classList.toggle('active', i === index);
-    });
-  }
-
-  function nextSlide() {
-    showSlide((currentSlide + 1) % slides.length);
-  }
-
-  function startCarousel() {
-    slideInterval = setInterval(nextSlide, 5000); // Change every 5 seconds
-  }
-
-  function stopCarousel() {
-    clearInterval(slideInterval);
-  }
-
-  // Add click events to dots
-  dots.forEach(dot => {
-    dot.addEventListener('click', () => {
-      const slideIndex = parseInt(dot.getAttribute('data-slide'));
-      showSlide(slideIndex);
-      // Restart auto-slide after manual navigation
-      stopCarousel();
-      startCarousel();
-    });
+function showSlide(index) {
+  slides.forEach((slide, i) => {
+    slide.classList.toggle('active', i === index);
+    dots[i].classList.toggle('active', i === index);
   });
+}
 
-  // Pause carousel on hover
-  const hero = document.querySelector('.hero');
-  hero.addEventListener('mouseenter', stopCarousel);
-  hero.addEventListener('mouseleave', startCarousel);
+function nextSlide() {
+  currentSlide = (currentSlide + 1) % slides.length;
+  showSlide(currentSlide);
+}
 
-  // Initialize carousel
-  startCarousel();
+setInterval(nextSlide, 10000); // Change every 10 seconds
 </script>
 
 </body>

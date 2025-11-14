@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About Us - ALG Enterprises</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Archivo Black', sans-serif;
+      background-color: #dfe5ef;
+      color: #000;
+    }
+    
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+      padding: 10px 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    nav img {
+      height: 70px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #4f9bd2;
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding-top: 10px;
+      }
+    }
+
+    /* ===== HERO SECTION ===== */
+    .about-hero {
+      position: relative;
+      width: 100%;
+      height: 350px;
+      background: url("../../images/alg-background.png") center/cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Fallback background color if image fails to load */
+    .about-hero {
+      background-color: #042842;
+    }
+
+    /* Dark overlay for readability */
+    .about-hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .about-hero h1 {
+      position: relative;
+      font-size: 64px;
+      color: white;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 15px 40px;
+      border-radius: 10px;
+      z-index: 1;
+      text-align: center;
+      margin: 0;
+    }
+
+    /* ===== CONTENT ===== */
+    .about-content {
+      max-width: 1100px;
+      margin: 60px auto;
+      padding: 0 20px;
+      font-size: 18px;
+      line-height: 1.8;
+      color: #111;
+    }
+
+    .about-content h2 {
+      font-size: 32px;
+      margin-top: 40px;
+      margin-bottom: 10px;
+      color: #042842;
+    }
+
+    .about-content ul {
+      margin-left: 40px;
+      list-style: disc;
+    }
+
+    .about-content li {
+      margin-bottom: 10px;
+    }
+
+    .about-content p {
+      margin-bottom: 20px;
+    }
+
+    /* ===== FAQ SECTION ===== */
+    .faq-section {
+      max-width: 1100px;
+      margin: 60px auto;
+      padding: 0 20px;
+    }
+
+    .faq-section h2 {
+      font-size: 32px;
+      text-align: center;
+      margin-bottom: 40px;
+      color: #042842;
+    }
+
+    .faq-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .faq-item {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .faq-item:hover {
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .faq-question {
+      padding: 20px 25px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #042842;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background-color 0.3s ease;
+    }
+
+    .faq-question:hover {
+      background-color: #f8f9fa;
+    }
+
+    .faq-question::after {
+      content: '+';
+      font-size: 24px;
+      font-weight: normal;
+      transition: transform 0.3s ease;
+    }
+
+    .faq-item.active .faq-question::after {
+      transform: rotate(45deg);
+      content: '−';
+    }
+
+    .faq-answer {
+      padding: 0 25px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      background-color: #f8f9fa;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .faq-item.active .faq-answer {
+      padding: 20px 25px;
+      max-height: 500px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .about-hero {
+        height: 250px;
+      }
+      
+      .about-hero h1 {
+        font-size: 42px;
+        padding: 12px 25px;
+      }
+      
+      .about-content {
+        margin: 40px auto;
+        font-size: 16px;
+      }
+      
+      .about-content h2 {
+        font-size: 28px;
+        margin-top: 30px;
+      }
+      
+      .about-content ul {
+        margin-left: 20px;
+      }
+      
+      .faq-section {
+        margin: 40px auto;
+      }
+      
+      .faq-section h2 {
+        font-size: 28px;
+      }
+      
+      .faq-question {
+        padding: 15px 20px;
+        font-size: 16px;
+      }
+      
+      .faq-answer {
+        padding: 0 20px;
+      }
+      
+      .faq-item.active .faq-answer {
+        padding: 15px 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .about-hero h1 {
+        font-size: 32px;
+        padding: 10px 20px;
+      }
+      
+      .about-content {
+        margin: 30px auto;
+        font-size: 15px;
+      }
+      
+      .about-content h2 {
+        font-size: 24px;
+      }
+      
+      .faq-section {
+        margin: 30px auto;
+      }
+      
+      .faq-section h2 {
+        font-size: 24px;
+      }
+      
+      .faq-question {
+        padding: 12px 15px;
+        font-size: 15px;
+      }
+      
+      .faq-answer {
+        padding: 0 15px;
+        font-size: 14px;
+      }
+      
+      .faq-item.active .faq-answer {
+        padding: 12px 15px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="scheduling.php">Scheduling</a>
+      <a href="about.html" class="active">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- ===== HERO IMAGE ===== -->
+  <section class="about-hero" role="img" aria-label="ALG Enterprises team working on roofing project">
+    <h1>About Us</h1>
+  </section>
+
+  <!-- ===== ABOUT CONTENT ===== -->
+  <section class="about-content">
+    <h2>ALG Enterprises</h2>
+    <p>
+      ALG Enterprises is a trusted provider of roofing and construction solutions, proudly serving clients across commercial, residential, industrial, and institutional sectors. Since our founding, we have been committed to delivering products and services that meet the highest standards of quality, durability, and customer satisfaction.
+    </p>
+    <p>
+      With years of hands-on experience and a skilled team of professionals, we specialize in metal roofing systems, wall cladding, and on-site roll forming services designed to perform in the most demanding environments. Our projects stand as a testament to our focus on precision, efficiency, and long-term value.
+    </p>
+    <p>
+      We understand that every project is unique. That's why we work closely with our clients from start to finish, ensuring each solution is tailored to their specific needs, timeline, and budget.
+    </p>
+
+    <h2>Our Mission</h2>
+    <p>
+      To deliver dependable, innovative, and long-lasting roofing and construction solutions through craftsmanship, commitment, and customer focus.
+    </p>
+
+    <h2>Our Vision</h2>
+    <p>
+      To be a leading force in the industry, known for quality, trust, and delivering value to every project we undertake.
+    </p>
+
+    <h2>Why Choose ALG Enterprises?</h2>
+    <ul>
+      <li>Proven expertise across multiple sectors</li>
+      <li>Skilled and reliable workforce</li>
+      <li>State-of-the-art technology, including mobile roll forming</li>
+      <li>Client-focused approach from planning to completion</li>
+      <li>Strong track record of successful projects</li>
+    </ul>
+
+    <p>
+      At ALG Enterprises, we don't just build structures — we build long-term relationships.
+    </p>
+  </section>
+
+  <!-- ===== FAQ SECTION ===== -->
+  <section class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+    <div class="faq-container">
+      <div class="faq-item">
+        <div class="faq-question">What types of roofing materials do you work with?</div>
+        <div class="faq-answer">
+          We specialize in metal roofing systems including standing seam, corrugated metal panels, and metal shingles. We also work with traditional materials like asphalt shingles, tiles, and commercial roofing systems. Our team can help you choose the best material for your specific needs and budget.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do you offer free estimates?</div>
+        <div class="faq-answer">
+          Yes, we provide free, no-obligation estimates for all our roofing services. Our team will visit your site, assess your needs, and provide a detailed quote outlining the scope of work, materials, timeline, and costs.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">How long does a typical roofing project take?</div>
+        <div class="faq-answer">
+          Project timelines vary depending on the size and complexity. Residential projects typically take 2-5 days, while commercial projects can range from 1-4 weeks. We provide detailed timelines during the estimation process and work efficiently to minimize disruption.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What is on-site rollforming and what are its benefits?</div>
+        <div class="faq-answer">
+          On-site rollforming allows us to manufacture custom-length metal panels directly at your job site. Benefits include reduced material waste, perfect panel lengths, fewer seams, faster installation, and minimized handling damage. This is especially valuable for large commercial projects and custom residential work.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do you provide warranties for your work?</div>
+        <div class="faq-answer">
+          Yes, we offer comprehensive warranties that cover both materials and workmanship. Our workmanship warranty typically ranges from 5-10 years, while material warranties vary by manufacturer and can extend up to 30 years or more for premium metal roofing systems.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Are you licensed and insured?</div>
+        <div class="faq-answer">
+          Absolutely. ALG Enterprises is fully licensed, bonded, and insured. We carry comprehensive liability insurance and workers' compensation coverage to protect both our team and your property throughout the duration of every project.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What areas do you serve?</div>
+        <div class="faq-answer">
+          We serve commercial, residential, and institutional clients throughout the region. While we're based locally, our mobile rollforming capabilities allow us to efficiently serve projects across a wider geographic area. Contact us to confirm service availability in your specific location.
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Can you work around my schedule?</div>
+        <div class="faq-answer">
+          Yes, we understand that roofing projects can be disruptive. We offer flexible scheduling options and will work with you to find the most convenient time for your project. We also take steps to minimize disruption and maintain clean, safe worksites.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // FAQ Dropdown Functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const faqItems = document.querySelectorAll('.faq-item');
+      
+      faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question');
+        
+        question.addEventListener('click', () => {
+          // Close all other items
+          faqItems.forEach(otherItem => {
+            if (otherItem !== item && otherItem.classList.contains('active')) {
+              otherItem.classList.remove('active');
+            }
+          });
+          
+          // Toggle current item
+          item.classList.toggle('active');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

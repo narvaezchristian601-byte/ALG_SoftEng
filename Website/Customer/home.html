@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALG Enterprises</title>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto+Slab:wght@300;400;700&family=Rubik+Dirt&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Roboto Slab', serif;
+  background-color: #dfe5ef;
+}
+    /* ===== NAVBAR ===== */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+      padding: 10px 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    nav img {
+      height: 70px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #4f9bd2;
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding-top: 10px;
+      }
+    }
+
+/* === MAIN CONTAINER === */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* === CAROUSEL SECTION === */
+.hero {
+  position: relative;
+  width: 95%;
+  max-width: 1400px;
+  margin: 20px auto;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 16 / 6;
+  background-color: #000;
+}
+
+/* Background image */
+.hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Overlay to darken background */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 22, 25, 0.6);
+  z-index: 1;
+}
+
+/* Text Slides */
+.hero-text {
+  position: absolute;
+  top: 30%;
+  left: 5%;
+  color: #fff;
+  z-index: 2;
+  max-width: 70%;
+  transition: opacity 1s ease-in-out;
+  opacity: 0;
+}
+
+.hero-text.active {
+  opacity: 1;
+}
+
+.hero-text h1 {
+  font-size: 2.8rem;
+  font-family: 'Rubik Dirt', cursive;
+  margin: 0 0 20px 0;
+  line-height: 1.2;
+  font-weight: bold;
+}
+
+.hero-text p {
+  font-size: 1.2rem;
+  line-height: 1.6;
+  font-weight: bold;
+}
+
+/* Page Dots */
+.page-dots {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #060607;
+  margin: 0 5px;
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.dot.active {
+  opacity: 1;
+}
+
+/* Lower Section Boxes */
+.lower-section {
+  display: flex;
+  justify-content: space-between;
+  width: 95%;
+  max-width: 1400px;
+  margin-bottom: 50px;
+  gap: 20px;
+}
+
+.box {
+  flex: 1;
+  background-color: #d8d8d9;
+  border-radius: 10px;
+  height: 250px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1000px) {
+  .navbar {
+    flex-direction: column;
+    padding: 15px 20px;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+  }
+
+  .hero-text h1 {
+    font-size: 2rem;
+  }
+
+  .hero-text p {
+    font-size: 1rem;
+  }
+
+  .lower-section {
+    flex-direction: column;
+  }
+}
+</style>
+
+
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html" class="active">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html">Projects</a>
+      <a href="appointment.php">Schedule Appointment</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- HERO CAROUSEL -->
+  <div class="hero">
+    <img src="../../images/alg-background.png" alt="ALG Enterprises Background">
+
+    <!-- Slide 1 -->
+    <div class="hero-text active">
+      <h1>Your shelter,<br>our responsibility</h1>
+      <p>At ALG Enterprises, we provide expert roofing services focused on quality, efficiency, and safety.</p>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="hero-text">
+      <h1>Building roofs,<br>building trust.</h1>
+      <p>We ensure your projects stand strong through craftsmanship and integrity — the ALG way.</p>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="hero-text">
+      <h1>Reliable, resilient,<br>ready for any weather.</h1>
+      <p>Our team guarantees durability and precision for every roofing solution we provide.</p>
+    </div>
+  </div>
+
+  <!-- Dots -->
+  <div class="page-dots">
+    <div class="dot active" data-slide="0"></div>
+    <div class="dot" data-slide="1"></div>
+    <div class="dot" data-slide="2"></div>
+  </div>
+
+  <!-- Lower Section -->
+  <div class="lower-section">
+    <div class="box box-1">
+      <h3>Why Choose ALG?</h3>
+      <p>With years of experience and a commitment to excellence, we deliver roofing solutions that stand the test of time. Our team combines expertise with quality materials.</p>
+    </div>
+    <div class="box box-2">
+      <h3>Get Started Today</h3>
+      <p>Ready to begin your roofing project? Contact us for a free consultation and estimate. We're here to bring your vision to life.</p>
+    </div>
+  </div>
+
+<script>
+  // Carousel Logic
+  const slides = document.querySelectorAll('.hero-text');
+  const dots = document.querySelectorAll('.dot');
+  let currentSlide = 0;
+  let slideInterval;
+
+  function showSlide(index) {
+    // Validate index
+    if (index < 0) index = slides.length - 1;
+    if (index >= slides.length) index = 0;
+    
+    currentSlide = index;
+    
+    slides.forEach((slide, i) => {
+      slide.classList.toggle('active', i === index);
+    });
+    
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === index);
+    });
+  }
+
+  function nextSlide() {
+    showSlide((currentSlide + 1) % slides.length);
+  }
+
+  function startCarousel() {
+    slideInterval = setInterval(nextSlide, 5000); // Change every 5 seconds
+  }
+
+  function stopCarousel() {
+    clearInterval(slideInterval);
+  }
+
+  // Add click events to dots
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const slideIndex = parseInt(dot.getAttribute('data-slide'));
+      showSlide(slideIndex);
+      // Restart auto-slide after manual navigation
+      stopCarousel();
+      startCarousel();
+    });
+  });
+
+  // Pause carousel on hover
+  const hero = document.querySelector('.hero');
+  hero.addEventListener('mouseenter', stopCarousel);
+  hero.addEventListener('mouseleave', startCarousel);
+
+  // Initialize carousel
+  startCarousel();
+</script>
+
+</body>
+</html>

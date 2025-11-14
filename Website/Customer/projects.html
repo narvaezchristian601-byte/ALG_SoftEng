@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALG Enterprises - Projects</title>
+  
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Archivo Black', sans-serif;
+      background-color: #dfe5ef;
+      color: #000;
+    }
+    
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #fff;
+      padding: 10px 60px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    nav img {
+      height: 70px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 60px;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: black;
+      font-weight: bold;
+      font-size: 18px;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #4f9bd2;
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        padding-top: 10px;
+      }
+    }
+    
+    /* ===== PROJECTS SECTION ===== */
+    .projects-section {
+      background-color: #dfe5ef;
+      text-align: center;
+      padding-bottom: 80px;
+    }
+
+    /* ===== PROJECT IMAGE BANNER ===== */
+    .project-banner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      overflow: hidden;
+      gap: 20px;
+      padding: 40px 60px 0;
+      box-sizing: border-box;
+    }
+
+    .banner-card {
+      position: relative;
+      flex: 1;
+      height: 350px;
+      overflow: hidden;
+      cursor: pointer;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .banner-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .banner-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 20px;
+      transition: transform 0.4s ease;
+    }
+
+    .banner-card:hover img {
+      transform: scale(1.05);
+    }
+
+    /* Overlay hover effect */
+    .banner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .banner-card:hover .banner-overlay {
+      opacity: 1;
+    }
+
+    .banner-overlay h3 {
+      margin: 0;
+      font-size: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .banner-overlay button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #4f9bd2;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-family: 'Archivo Black', sans-serif;
+    }
+
+    .banner-overlay button:hover {
+      background-color: #3b82b3;
+    }
+
+    /* ===== PROJECTS TEXT SECTION ===== */
+    .projects-content {
+      padding: 60px 100px 0;
+      text-align: center;
+    }
+
+    .projects-title {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .projects-description {
+      font-size: 18px;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1100px;
+      margin: 0 auto;
+      text-align: justify;
+    }
+
+    /* ===== MODAL ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 800px;
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-content img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 26px;
+      cursor: pointer;
+      color: #333;
+    }
+
+    .close-btn:hover { color: red; }
+
+    @media (max-width: 900px) {
+      .project-banner {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .banner-card {
+        width: 100%;
+        height: 250px;
+      }
+
+      .projects-content {
+        padding: 40px 40px;
+      }
+      
+      .projects-title {
+        font-size: 36px;
+      }
+      
+      .projects-description {
+        font-size: 16px;
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="../../images/alg-logo-black.png" alt="ALG Enterprises Logo">
+    </div>
+    <div class="nav-links">
+      <a href="home.html">Home</a>
+      <a href="products.html">Products</a>
+      <a href="services.html">Services</a>
+      <a href="projects.html" class="active">Projects</a>
+      <a href="scheduling.php">Scheduling</a>
+      <a href="about.html">About Us</a>
+      <a href="contact.html">Contact Us</a>
+    </div>
+  </nav>
+
+  <!-- ===== PROJECT BANNER (IMAGES SIDE BY SIDE) ===== -->
+  <section class="project-banner">
+    <div class="banner-card" data-project="residential">
+      <img src="../../images/alg-background.png" alt="Residential Projects" onerror="this.src='https://via.placeholder.com/600x350/4f9bd2/ffffff?text=Residential+Projects'">
+      <div class="banner-overlay">
+        <h3>Residential Projects</h3>
+        <button class="view-project-btn">View Project</button>
+      </div>
+    </div>
+
+    <div class="banner-card" data-project="government">
+      <img src="../../images/alg-background.png" alt="Government Projects" onerror="this.src='https://via.placeholder.com/600x350/042842/ffffff?text=Government+Projects'">
+      <div class="banner-overlay">
+        <h3>Government Projects</h3>
+        <button class="view-project-btn">View Project</button>
+      </div>
+    </div>
+
+    <div class="banner-card" data-project="institutional">
+      <img src="../../images/alg-background.png" alt="Institutional Projects" onerror="this.src='https://via.placeholder.com/600x350/3b82b3/ffffff?text=Institutional+Projects'">
+      <div class="banner-overlay">
+        <h3>Institutional Projects</h3>
+        <button class="view-project-btn">View Project</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROJECTS TEXT SECTION -->
+  <section class="projects-section">
+    <div class="projects-content">
+      <h1 class="projects-title">Projects</h1>
+      <div class="projects-description">
+        ALG Enterprises is committed to delivering high-quality roofing and cladding solutions across a wide range of industries—including Commercial, Residential, Industrial, Institutional, Agricultural, and Government sectors. 
+        With a focus on durability, functionality, and aesthetics, our projects are built to withstand harsh environments while meeting the unique requirements of every client.<br><br>
+        Explore our portfolio to see how we bring value and excellence to every build. Whether it's a large-scale commercial complex, a private residence, a government facility, or an agricultural installation, ALG Enterprises provides roofing systems that perform and last.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== MODAL ===== -->
+  <div class="modal" id="projectModal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeModal">&times;</span>
+      <img id="modal-img" src="" alt="">
+      <h2 id="modal-title"></h2>
+      <p id="modal-desc"></p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const projectCards = document.querySelectorAll('.banner-card');
+      const viewProjectBtns = document.querySelectorAll('.view-project-btn');
+      const modal = document.getElementById('projectModal');
+      const modalImg = document.getElementById('modal-img');
+      const modalTitle = document.getElementById('modal-title');
+      const modalDesc = document.getElementById('modal-desc');
+      const closeModalBtn = document.getElementById('closeModal');
+
+      // Project data
+      const projectData = {
+        residential: {
+          title: "Residential Projects",
+          desc: "Our residential projects showcase beautiful and durable roofing solutions for homes of all sizes. From modern architectural designs to traditional homes, we provide roofing that enhances both aesthetics and protection.",
+          image: "../../images/alg-background.png"
+        },
+        government: {
+          title: "Government Projects",
+          desc: "We've successfully completed numerous government projects, delivering secure and long-lasting roofing systems for public buildings, facilities, and infrastructure projects that serve communities.",
+          image: "../../images/alg-background.png"
+        },
+        institutional: {
+          title: "Institutional Projects",
+          desc: "Our institutional projects include schools, hospitals, and other public facilities where safety, durability, and performance are paramount. We deliver roofing solutions that stand the test of time.",
+          image: "../../images/alg-background.png"
+        }
+      };
+
+      // Function to open modal with project details
+      function openProjectModal(projectType) {
+        const project = projectData[projectType];
+        modalImg.src = project.image;
+        modalImg.alt = project.title;
+        modalTitle.textContent = project.title;
+        modalDesc.textContent = project.desc;
+        modal.style.display = "flex";
+      }
+
+      // Add click events to project cards
+      projectCards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          // Don't trigger if clicking the button (it has its own handler)
+          if (!e.target.classList.contains('view-project-btn')) {
+            const projectType = card.dataset.project;
+            openProjectModal(projectType);
+          }
+        });
+      });
+
+      // Add click events to view project buttons
+      viewProjectBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // Prevent card click event
+          const card = e.target.closest('.banner-card');
+          const projectType = card.dataset.project;
+          openProjectModal(projectType);
+        });
+      });
+
+      // Close modal functionality
+      closeModalBtn.addEventListener('click', () => {
+        modal.style.display = "none";
+      });
+
+      window.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.style.display = "none";
+        }
+      });
+
+      // Handle keyboard events
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+          modal.style.display = "none";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

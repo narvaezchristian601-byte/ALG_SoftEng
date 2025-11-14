@@ -1,30 +1,25 @@
 <?php
-include("db.php");
+require_once("db.php");
 session_start();
 
-
-if(isset($_POST['delete_order_id'])) {
-    $orderId = $_POST['delete_order_id'];
-        // Get Customer ID
-    $stmtGetCustomer = $conn->prepare("SELECT customer_id FROM Orders WHERE Orders_id = ?");
-    $stmtGetCustomer->bind_param("i", $orderId);
-    $stmtGetCustomer->execute();
-    $stmtGetCustomer->bind_result($customerId);
-    $stmtGetCustomer->fetch();
-    $stmtGetCustomer->close();
-
-    // Delete order itself
-    $stmtItems = $conn->prepare("DELETE FROM OrderItems WHERE Orders_id = ?");
+// Update stock if order is deleted
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_order_id'])) {
+    $orderId = intval($_POST['delete_order_id']);
+// restore stock first
+    $stmtItems = $conn->prepare("SELECT Product_id, quantity FROM OrderItems WHERE Orders_id = ?");
     $stmtItems->bind_param("i", $orderId);
     $stmtItems->execute();
+    $itemsResult = $stmtItems->get_result();
+
+    while ($item = $itemsResult->fetch_assoc()) {
+        $stmtUpdate = $conn->prepare("UPDATE Product SET stock = stock + ? WHERE Product_id = ?");
+        $stmtUpdate->bind_param("ii", $item['quantity'], $item['Product_id']);
+        $stmtUpdate->execute();
+        $stmtUpdate->close();
+    }
     $stmtItems->close();
 
-    $stmtOrder = $conn->prepare("DELETE FROM Orders WHERE Orders_id = ?");
-    $stmtOrder->bind_param("i", $orderId);
-    $stmtOrder->execute();
-    $stmtOrder->close();
-
-    // Delete Customer data
+// get customer id
     $stmtGetCustomer = $conn->prepare("SELECT customer_id FROM Orders WHERE Orders_id = ?");
     $stmtGetCustomer->bind_param("i", $orderId);
     $stmtGetCustomer->execute();
@@ -32,21 +27,36 @@ if(isset($_POST['delete_order_id'])) {
     $stmtGetCustomer->fetch();
     $stmtGetCustomer->close();
 
+// delete order items
+    $stmtDelItems = $conn->prepare("DELETE FROM OrderItems WHERE Orders_id = ?");
+    $stmtDelItems->bind_param("i", $orderId);
+    $stmtDelItems->execute();
+    $stmtDelItems->close();
+
+// delete order record
+    $stmtDelOrder = $conn->prepare("DELETE FROM Orders WHERE Orders_id = ?");
+    $stmtDelOrder->bind_param("i", $orderId);
+    $stmtDelOrder->execute();
+    $stmtDelOrder->close();
+
+// delete the customer
     $success = true;
-    $stmtCustomer = $conn->prepare("DELETE FROM Customers WHERE customer_id = ?");
-    $stmtCustomer->bind_param("i", $customerId);
-    $success = $stmtCustomer->execute();
-    $stmtCustomer->close();
-
-
-    if ($success) {
-        echo "<script>alert('Order deleted successfully.'); window.location='orders.php';</script>";
-        exit;
-    } else {
-        echo "<script>alert('Failed to delete order.');</script>";
+    if ($customerId) {
+        $stmtDelCustomer = $conn->prepare("DELETE FROM Customers WHERE customer_id = ?");
+        $stmtDelCustomer->bind_param("i", $customerId);
+        $success = $stmtDelCustomer->execute();
+        $stmtDelCustomer->close();
     }
 
+    if ($success) {
+        echo "<script>alert('Order & Customer deleted successfully.'); window.location='orders.php';</script>";
+        exit;
+    } else {
+        echo "<script>alert('Failed to delete order or customer.');</script>";
+    }
 }
+
+
 
 // Search handling
 $searchTerm = "";
@@ -83,7 +93,7 @@ if ($requestedDir === 'ASC') {
     $orderDir = 'DESC';
     $currentDir = 'DESC';
 }
-
+// Get orders with customer names and items
 $stmt = $conn->prepare(
     "SELECT o.Orders_id, c.Name, o.total_amount, o.status, o.order_date,
             oi.Product_id, oi.quantity, oi.price, p.Name AS ProductName
@@ -104,12 +114,14 @@ $result = $stmt->get_result();
 // Group by Orders_id
 $orders = [];
 while ($row = $result->fetch_assoc()) {
+    // Initialize order if not exists
     $orders[$row['Orders_id']]['details'] = [
-        'Name' => $row['Name'],
-        'total_amount' => $row['total_amount'],
-        'status' => $row['status'],
-        'order_date' => $row['order_date'],
+        'Name'        => $row['Name'],
+        'total_amount'=> $row['total_amount'],
+        'status'      => $row['status'],
+        'order_date'  => $row['order_date'],
     ];
+    // Append item
     $orders[$row['Orders_id']]['items'][] = [
         'ProductName' => $row['ProductName'],
         'quantity' => $row['quantity'],
@@ -136,6 +148,7 @@ function sortLink($col, $label, $currentCol, $currentDir, $searchTerm) {
     $url = '?search=' . urlencode($searchTerm) . '&sort=' . urlencode($col) . '&dir=' . urlencode($dir);
     return '<a href="' . htmlspecialchars($url) . '">' . htmlspecialchars($label . $arrow) . '</a>';
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -144,6 +157,7 @@ function sortLink($col, $label, $currentCol, $currentDir, $searchTerm) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ALG Roofing System - Orders</title>
 <style>
+
 
 html, body {
     margin: 0;
@@ -293,6 +307,7 @@ a {
         <a href="orderform.php">Order Form</a>
         <a href="calendar.php">Schedule Calendar</a>
         <a href="reports.php">Reports</a>
+        <a href="import_products.php">Import Products</a>
     </nav>
 
 <main>
@@ -337,6 +352,7 @@ a {
                         <option value="Completed" <?php if ($data['details']['status'] == 'Completed') echo 'selected'; ?>>Completed</option>
                         <option value="Dismissed" <?php if ($data['details']['status'] == 'Dismissed') echo 'selected'; ?>>Dismissed</option>
                     </select>
+
                 </td>
                 <td><?php echo htmlspecialchars($data['details']['order_date']); ?></td>
                 <td><button class="delete-order" data-id="<?php echo $order_id; ?>">Delete</button></td>
@@ -385,26 +401,26 @@ document.querySelectorAll('.status-dropdown').forEach(select => {
     select.dataset.current = select.value;
 });
  // For the delete buttons
-    document.querySelectorAll('.delete-order').forEach(button => {
-        button.addEventListener('click', function() {
-            const orderId = this.dataset.id;
-            if (confirm(`Are you sure you want to delete this order (ID: ${orderId})? This action cannot be undone.`)) {
-                // Create a form programmatically to send a POST request
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = 'orders.php';
-                
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'delete_order_id';
-                input.value = orderId;
-                
-                form.appendChild(input);
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
+document.querySelectorAll('.delete-order').forEach(button => {
+    button.addEventListener('click', function() {
+        const orderId = this.dataset.id;
+        if (confirm(`Are you sure you want to delete this order (ID: ${orderId})? This action cannot be undone.`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'orders.php'; // backend script handles deletion & stock restore
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'delete_order_id';
+            input.value = orderId;
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
     });
+});
+
 </script>
 </body>
 </html>
